@@ -81,7 +81,7 @@ public class EmbeddingCacheProvider {
      * @param apiKey domain
      * @param action what to do with {@link EmbeddingCollection}
      */
-    public void exposeIfPresent(String apiKey, Consumer<EmbeddingCollection> action) {
+    public void expose(String apiKey, Consumer<EmbeddingCollection> action) {
         action.accept(getOrLoad(apiKey));
     }
 

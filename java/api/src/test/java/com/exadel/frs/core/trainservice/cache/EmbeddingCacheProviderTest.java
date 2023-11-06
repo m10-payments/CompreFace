@@ -200,7 +200,7 @@ class EmbeddingCacheProviderTest {
         embeddingCacheProvider.invalidate(API_KEY);
 
         // assert
-        embeddingCacheProvider.exposeIfPresent(API_KEY, ec -> {
+        embeddingCacheProvider.expose(API_KEY, ec -> {
             Assertions.assertThat(ec.getEmbeddings().size(0)).isZero();
             Assertions.assertThat(ec.getProjections()).isEmpty();
         });
@@ -227,7 +227,7 @@ class EmbeddingCacheProviderTest {
         embeddingCacheProvider.receiveInvalidateCache(API_KEY);
 
         // assert
-        embeddingCacheProvider.exposeIfPresent(API_KEY, ec -> {
+        embeddingCacheProvider.expose(API_KEY, ec -> {
             Assertions.assertThat(ec.getEmbeddings().size(0)).isZero();
             Assertions.assertThat(ec.getProjections()).isEmpty();
         });

@@ -29,7 +29,7 @@ public class NotificationHandler {
             .filter(e -> !e.getValue().isEmpty())
             .flatMap(e -> e.getValue().stream().filter(Objects::nonNull).map(id -> new EmbeddingProjection(id, e.getKey())))
             .forEach(
-                em -> cacheProvider.exposeIfPresent(
+                em -> cacheProvider.expose(
                     action.apiKey(),
                     c -> c.removeEmbedding(em)
                 )
@@ -41,7 +41,7 @@ public class NotificationHandler {
             .stream()
             .filter(StringUtils::isNotBlank)
             .forEach(
-                s -> cacheProvider.exposeIfPresent(
+                s -> cacheProvider.expose(
                     action.apiKey(),
                     c -> c.removeEmbeddingsBySubjectName(s)
                 )
@@ -56,7 +56,7 @@ public class NotificationHandler {
             .toList();
         subjectService.loadEmbeddingsById(filtered)
             .forEach(
-                em -> cacheProvider.exposeIfPresent(
+                em -> cacheProvider.expose(
                     action.apiKey(),
                     c -> c.addEmbedding(em)
                 )
@@ -70,7 +70,7 @@ public class NotificationHandler {
             .filter(e -> StringUtils.isNotBlank(e.getKey()))
             .filter(e -> StringUtils.isNotBlank(e.getValue()))
             .forEach(
-                e -> cacheProvider.exposeIfPresent(
+                e -> cacheProvider.expose(
                     action.apiKey(),
                     c -> c.updateSubjectName(e.getKey(), e.getValue())
                 )
@@ -78,7 +78,7 @@ public class NotificationHandler {
     }
 
     public <T> void invalidate(CacheActionDto<T> action) {
-        cacheProvider.exposeIfPresent(
+        cacheProvider.expose(
             action.apiKey(),
             e -> cacheProvider.receiveInvalidateCache(action.apiKey())
         );
