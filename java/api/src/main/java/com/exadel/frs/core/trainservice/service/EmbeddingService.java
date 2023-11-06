@@ -9,7 +9,6 @@ import com.exadel.frs.commonservice.repository.ImgRepository;
 import com.exadel.frs.core.trainservice.system.global.Constants;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
-import lombok.val;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,9 +31,9 @@ public class EmbeddingService {
         return embeddingRepository.updateEmbedding(embeddingId, embedding, calculator);
     }
 
-    @Transactional
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public <T> T doWithEnhancedEmbeddingProjectionStream(String apiKey, Function<Stream<EnhancedEmbeddingProjection>, T> func) {
-        try (val stream = embeddingRepository.findBySubjectApiKey(apiKey)) {
+        try (var stream = embeddingRepository.findBySubjectApiKey(apiKey)) {
             return func.apply(stream);
         }
     }

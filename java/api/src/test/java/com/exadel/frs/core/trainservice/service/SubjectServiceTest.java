@@ -46,6 +46,7 @@ import com.exadel.frs.core.trainservice.component.classifiers.EuclideanDistanceC
 import com.exadel.frs.core.trainservice.dao.SubjectDao;
 import com.exadel.frs.core.trainservice.dto.ProcessImageParams;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -112,7 +113,7 @@ class SubjectServiceTest {
         // verify deleted from DB
         verify(subjectDao).removeAllSubjectEmbeddings(API_KEY, subjectName);
         // verify cache
-        verify(embeddingCacheProvider).ifPresent(eq(API_KEY), any());
+        verify(embeddingCacheProvider).removeBySubjectName(API_KEY, subjectName);
     }
 
     @Test
@@ -123,21 +124,23 @@ class SubjectServiceTest {
         // verify deleted from DB
         verify(subjectDao).deleteSubjectByName(API_KEY, subjectName);
         // verify cache
-        verify(embeddingCacheProvider).ifPresent(eq(API_KEY), any());
+        verify(embeddingCacheProvider).removeBySubjectName(eq(API_KEY), any());
     }
 
     @Test
     void testRemoveSubjectEmbedding() {
         var embeddingId = UUID.randomUUID();
 
-        when(subjectDao.removeSubjectEmbedding(API_KEY, embeddingId)).thenReturn(new Embedding());
+        Embedding em = new Embedding();
+        em.setSubject(new Subject());
+        when(subjectDao.removeSubjectEmbedding(API_KEY, embeddingId)).thenReturn(em);
 
         subjectService.removeSubjectEmbedding(API_KEY, embeddingId);
 
         // verify deleted from DB
         verify(subjectDao).removeSubjectEmbedding(API_KEY, embeddingId);
         // verify cache update attempt
-        verify(embeddingCacheProvider).ifPresent(eq(API_KEY), any());
+        verify(embeddingCacheProvider).removeEmbedding(eq(API_KEY), any());
     }
 
     static Stream<Arguments> subjectNamePairsFailed() {
@@ -172,7 +175,7 @@ class SubjectServiceTest {
         assertThat(updated).isTrue();
 
         // verify cache update attempt
-        verify(embeddingCacheProvider).ifPresent(eq(API_KEY), any());
+        verify(embeddingCacheProvider).updateSubjectName(API_KEY, oldSubjectName, newSubjectName);
     }
 
     @Test
@@ -275,6 +278,26 @@ class SubjectServiceTest {
                         .additionalParams(Map.of(IMAGE_ID, randomUUId))
                         .build()
         ));
+    }
+
+    @Test
+    void loadEmbeddingsById() {
+        // arrange
+        var embeddingIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        var embeddings = embeddingIds.stream()
+                .map(id -> {
+                    var e = new Embedding();
+                    e.setId(id);
+                    return e;
+                }).collect(Collectors.toList());
+        when(subjectDao.loadAllEmbeddingsByIds(embeddingIds))
+            .thenReturn(embeddings);
+
+        // act
+        var actual = subjectService.loadEmbeddingsById(embeddingIds);
+
+        // assert
+        assertThat(actual).isEqualTo(embeddings);
     }
 
     private static FindFacesResponse findFacesResponse(int faceCount) {
