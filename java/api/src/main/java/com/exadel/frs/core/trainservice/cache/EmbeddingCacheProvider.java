@@ -104,8 +104,8 @@ public class EmbeddingCacheProvider {
         cache.invalidate(apiKey);
     }
 
-    private void notifyCacheEvent(CacheAction event, String apiKey, Object action) {
-        CacheActionDto<?> cacheActionDto = new CacheActionDto<>(event, apiKey, SERVER_UUID, action);
+    private <T> void notifyCacheEvent(CacheAction event, String apiKey, T action) {
+        CacheActionDto<T> cacheActionDto = new CacheActionDto<>(event, apiKey, SERVER_UUID, action);
         notificationSenderService.notifyCacheChange(cacheActionDto);
     }
 }
