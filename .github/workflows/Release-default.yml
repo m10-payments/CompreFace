@@ -22,17 +22,12 @@ jobs:
           docker-compose build
           docker images
 
-      #- name: Login to GitHub Packages
-      #  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+      - name: Login to GitHub Packages
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
         
-      #- name: Push Docker Image
-      #  run: docker push docker.pkg.github.com/${{ github.repository }}/my-image:latest
-
-      #- name: Push images to Docker Hub
-      #  working-directory: ./dev/
-      #  env:
-      #    VERSION: ${{ github.event.inputs.version }}
-      #  run: |
-      #    docker-compose push
-      #    sed -i 's/${VERSION}/latest/g' .env
-      #    docker-compose push
+      - name: Push images to Docker Hub
+        working-directory: ./dev/
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          docker-compose push
