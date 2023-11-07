@@ -14,6 +14,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
@@ -50,28 +51,48 @@ public class EmbeddingCacheProvider {
     }
 
     public void removeEmbedding(String apiKey, EmbeddingProjection embedding) {
-        getOrLoad(apiKey).removeEmbedding(embedding);
-        notifyCacheEvent(
-            CacheAction.REMOVE_EMBEDDINGS,
-            apiKey,
-            new RemoveEmbeddings(Map.of(embedding.subjectName(), List.of(embedding.embeddingId())))
-        );
+        Optional.ofNullable(cache.getIfPresent(apiKey))
+            .ifPresent(
+                ec -> {
+                    ec.removeEmbedding(embedding);
+                    notifyCacheEvent(
+                        CacheAction.REMOVE_EMBEDDINGS,
+                        apiKey,
+                        new RemoveEmbeddings(Map.of(embedding.subjectName(), List.of(embedding.embeddingId())))
+                    );
+                }
+            );
     }
 
     public void updateSubjectName(String apiKey, String oldSubjectName, String newSubjectName) {
-        getOrLoad(apiKey).updateSubjectName(oldSubjectName, newSubjectName);
-        notifyCacheEvent(CacheAction.RENAME_SUBJECTS, apiKey, new RenameSubjects(Map.of(oldSubjectName, newSubjectName)));
+        Optional.ofNullable(cache.getIfPresent(apiKey))
+            .ifPresent(
+                ec -> {
+                    ec.updateSubjectName(oldSubjectName, newSubjectName);
+                    notifyCacheEvent(CacheAction.RENAME_SUBJECTS, apiKey, new RenameSubjects(Map.of(oldSubjectName, newSubjectName)));
+                }
+            );
     }
 
     public void removeBySubjectName(String apiKey, String subjectName) {
-        getOrLoad(apiKey).removeEmbeddingsBySubjectName(subjectName);
-        notifyCacheEvent(CacheAction.REMOVE_SUBJECTS, apiKey, new RemoveSubjects(List.of(subjectName)));
+        Optional.ofNullable(cache.getIfPresent(apiKey))
+            .ifPresent(
+                ec -> {
+                    ec.removeEmbeddingsBySubjectName(subjectName);
+                    notifyCacheEvent(CacheAction.REMOVE_SUBJECTS, apiKey, new RemoveSubjects(List.of(subjectName)));
+                }
+            );
     }
 
 
     public void addEmbedding(String apiKey, Embedding embedding) {
-        getOrLoad(apiKey).addEmbedding(embedding);
-        notifyCacheEvent(CacheAction.ADD_EMBEDDINGS, apiKey, new AddEmbeddings(List.of(embedding.getId())));
+        Optional.ofNullable(cache.getIfPresent(apiKey))
+            .ifPresent(
+                ec -> {
+                    ec.addEmbedding(embedding);
+                    notifyCacheEvent(CacheAction.ADD_EMBEDDINGS, apiKey, new AddEmbeddings(List.of(embedding.getId())));
+                }
+            );
     }
 
     /**
@@ -82,7 +103,8 @@ public class EmbeddingCacheProvider {
      * @param action what to do with {@link EmbeddingCollection}
      */
     public void expose(String apiKey, Consumer<EmbeddingCollection> action) {
-        action.accept(getOrLoad(apiKey));
+        Optional.ofNullable(cache.getIfPresent(apiKey))
+                .ifPresent(action);
     }
 
     public void invalidate(final String apiKey) {

@@ -86,11 +86,14 @@ class EmbeddingCacheProviderTest {
                 var function = (Function<Stream<EnhancedEmbeddingProjection>, ?>) invocation.getArgument(1);
                 return function.apply(Stream.of());
             });
+        embeddingCacheProvider.getOrLoad(API_KEY);
+        reset(embeddingService);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void getOrLoad() {
+        embeddingCacheProvider.invalidate(API_KEY);
         reset(embeddingService);
         var projections = new EnhancedEmbeddingProjection[]{
                 makeEnhancedEmbeddingProjection("A"),
@@ -106,6 +109,7 @@ class EmbeddingCacheProviderTest {
 
         var actual = embeddingCacheProvider.getOrLoad(API_KEY);
 
+        verify(embeddingService, times(1)).doWithEnhancedEmbeddingProjectionStream(eq(API_KEY), any());
         assertThat(actual, notNullValue());
         assertThat(actual.getProjections(), notNullValue());
         assertThat(actual.getProjections().size(), is(projections.length));
