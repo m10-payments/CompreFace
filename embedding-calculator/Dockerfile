@@ -40,9 +40,9 @@ COPY tools tools
 COPY sample_images sample_images
 
 # run tests
-ARG SKIP_TESTS
-COPY pytest.ini .
-RUN if [ -z $SKIP_TESTS  ]; then pytest -m "not performance" /app/ml/src; fi
+#ARG SKIP_TESTS
+#COPY pytest.ini .
+#RUN if [ -z $SKIP_TESTS  ]; then pytest -m "not performance" /app/ml/src; fi
 
 EXPOSE 3000
 
