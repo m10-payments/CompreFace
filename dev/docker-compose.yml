@@ -4,20 +4,20 @@ volumes:
   postgres-data:
 
 services:
-  compreface-postgres-db:
-    image: ${registry}compreface-postgres-db:${POSTGRES_VERSION}
-    restart: always
-    container_name: "compreface-postgres-db"
-    build:
-      context: ../db
-    ports:
-      - "6432:5432"
-    environment:
-      - POSTGRES_USER=${postgres_username}
-      - POSTGRES_PASSWORD=${postgres_password}
-      - POSTGRES_DB=${postgres_db}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+ # compreface-postgres-db:
+ #   image: ${registry}compreface-postgres-db:${POSTGRES_VERSION}
+ #   restart: always
+ #   container_name: "compreface-postgres-db"
+ #   build:
+ #     context: ../db
+ #   ports:
+ #     - "6432:5432"
+ #   environment:
+ #     - POSTGRES_USER=${postgres_username}
+ #     - POSTGRES_PASSWORD=${postgres_password}
+ #     - POSTGRES_DB=${postgres_db}
+ #   volumes:
+ #     - postgres-data:/var/lib/postgresql/data
 
   #compreface-admin:
   #  image: ${registry}compreface-admin:${ADMIN_VERSION}
