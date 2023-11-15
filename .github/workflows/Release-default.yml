@@ -18,6 +18,8 @@ jobs:
           #APPERY_API_KEY: ${{ secrets.APPERY_API_KEY }}
         working-directory: ./dev/
         run: |
+          sed -i 's/registry=/registry=m10-payments\//g' .env
+          docker-compose build
           sed -i 's/latest/${VERSION}/g' .env
           docker-compose build
           docker images
