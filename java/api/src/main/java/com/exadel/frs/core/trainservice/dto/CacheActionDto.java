@@ -5,16 +5,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Value
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true) // here and below "ignoreUnknown = true" for backward compatibility
 public class CacheActionDto<T> {
-    CacheAction cacheAction;
-    String apiKey;
+    private CacheAction cacheAction;
+    private String apiKey;
     @JsonProperty("uuid")
-    UUID serverUUID;
-    T payload;
+    private UUID serverUUID;
+    private T payload;
 
     public <S> CacheActionDto<S> withPayload(S newPayload) {
         return new CacheActionDto<>(
@@ -38,27 +42,35 @@ public class CacheActionDto<T> {
         INVALIDATE
     }
 
-    @Value
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class RemoveEmbeddings {
-        Map<String, List<UUID>> embeddings;
+        private Map<String, List<UUID>> embeddings;
     }
 
-    @Value
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class RemoveSubjects {
-        List<String> subjects;
+        private List<String> subjects;
     }
 
-    @Value
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class AddEmbeddings {
-        List<UUID> embeddings;
+        private List<UUID> embeddings;
     }
 
-    @Value
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class RenameSubjects {
-        Map<String, String> subjectsNamesMapping;
+        private Map<String, String> subjectsNamesMapping;
     }
 }
