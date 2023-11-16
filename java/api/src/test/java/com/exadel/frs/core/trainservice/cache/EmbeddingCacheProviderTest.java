@@ -36,7 +36,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -233,7 +232,6 @@ class EmbeddingCacheProviderTest {
         });
     }
 
-    @NotNull
     private static <T> CacheActionDto<T> buildCacheActionDto(
         CacheAction cacheAction,
         T payload
