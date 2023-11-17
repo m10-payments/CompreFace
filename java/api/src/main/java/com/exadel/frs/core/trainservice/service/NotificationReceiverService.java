@@ -97,16 +97,16 @@ public class NotificationReceiverService {
                 notificationHandler.invalidate(action);
                 break;
             case REMOVE_SUBJECTS:
-                notificationHandler.removeSubjects(convert(action));
+                notificationHandler.removeSubjects(convert(action, new TypeReference<>() {}));
                 break;
             case ADD_EMBEDDINGS:
-                notificationHandler.addEmbeddings(convert(action));
+                notificationHandler.addEmbeddings(convert(action, new TypeReference<>() {}));
                 break;
             case REMOVE_EMBEDDINGS:
-                notificationHandler.removeEmbeddings(convert(action));
+                notificationHandler.removeEmbeddings(convert(action, new TypeReference<>() {}));
                 break;
             case RENAME_SUBJECTS:
-                notificationHandler.renameSubjects(convert(action));
+                notificationHandler.renameSubjects(convert(action, new TypeReference<>() {}));
                 break;
             case DELETE:
                 notificationHandler.handleDelete(action);
@@ -121,9 +121,9 @@ public class NotificationReceiverService {
     }
 
     @SneakyThrows
-    private <T> CacheActionDto<T> convert(CacheActionDto<Map<String, Object>> action) {
+    private <T> CacheActionDto<T> convert(CacheActionDto<Map<String, Object>> action, TypeReference<T> tf) {
         return action.withPayload(
-            objectMapper.convertValue(action.getPayload(), new TypeReference<>() {})
+            objectMapper.convertValue(action.getPayload(), tf)
         );
     }
 }
