@@ -15,6 +15,9 @@ import com.google.common.cache.CacheBuilder;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +37,10 @@ public class EmbeddingCacheProvider {
 
     private final NotificationSenderService notificationSenderService;
 
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Lock writeLock = lock.writeLock();
+    private final Lock readLock = lock.readLock();
+
     private static final Cache<String, EmbeddingCollection> cache =
             CacheBuilder.newBuilder()
                     .expireAfterAccess(CACHE_EXPIRATION, TimeUnit.SECONDS)
@@ -41,12 +48,29 @@ public class EmbeddingCacheProvider {
                     .build();
 
     public EmbeddingCollection getOrLoad(final String apiKey) {
-        var result = cache.getIfPresent(apiKey);
+        var result = getWithLock(apiKey);
         if (result == null) {
-            result = embeddingService.doWithEnhancedEmbeddingProjectionStream(apiKey, EmbeddingCollection::from);
-            cache.put(apiKey, result);
+            try {
+                writeLock.lock();
+                result = cache.getIfPresent(apiKey);
+                if (result == null) {
+                    result = embeddingService.doWithEnhancedEmbeddingProjectionStream(apiKey, EmbeddingCollection::from);
+                    cache.put(apiKey, result);
+                }
+            } finally {
+                writeLock.unlock();
+            }
         }
         return result;
+    }
+
+    private EmbeddingCollection getWithLock(String apiKey) {
+        try {
+            readLock.lock();
+            return cache.getIfPresent(apiKey);
+        } finally {
+            readLock.unlock();
+        }
     }
 
     public void removeEmbedding(String apiKey, EmbeddingProjection embedding) {
