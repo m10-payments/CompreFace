@@ -33,7 +33,7 @@ public class SubjectDao {
     }
 
     public List<Embedding> loadAllEmbeddingsByIds(Iterable<UUID> ids) {
-        return embeddingRepository.findAllById(ids);
+        return embeddingRepository.findByIdIn(ids);
     }
 
     @Transactional
