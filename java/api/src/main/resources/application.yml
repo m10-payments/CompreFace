@@ -110,9 +110,9 @@ swagger:
 management:
   health:
     livenessState:
-      enabled: true
+      enabled: false
     readinessState:
-      enabled: true
+      enabled: false
   endpoint:
     health:
       group:
@@ -124,4 +124,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: ""
