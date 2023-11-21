@@ -1,6 +1,7 @@
 package com.exadel.frs.core.trainservice.service;
 
 import com.exadel.frs.commonservice.entity.Embedding;
+import com.exadel.frs.commonservice.entity.EmbeddingProjection;
 import com.exadel.frs.commonservice.entity.Subject;
 import com.exadel.frs.commonservice.exception.EmbeddingNotFoundException;
 import com.exadel.frs.commonservice.exception.TooManyFacesException;
@@ -16,18 +17,22 @@ import com.exadel.frs.core.trainservice.dto.EmbeddingInfo;
 import com.exadel.frs.core.trainservice.dto.FaceVerification;
 import com.exadel.frs.core.trainservice.dto.ProcessImageParams;
 import com.exadel.frs.core.trainservice.system.global.Constants;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
-
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Stream;
 
 import static java.math.RoundingMode.HALF_UP;
 
@@ -36,6 +41,7 @@ import static java.math.RoundingMode.HALF_UP;
 @Slf4j
 public class SubjectService {
 
+    private static final int MINIMUM_EMBEDDING_COUNT = 1;
     private static final int MAX_FACES_TO_SAVE = 1;
     public static final int MAX_FACES_TO_RECOGNIZE = 2;
 
@@ -62,15 +68,16 @@ public class SubjectService {
         return deletedCount;
     }
 
+    public List<Embedding> loadEmbeddingsById(Iterable<UUID> embeddingsIds) {
+       return subjectDao.loadAllEmbeddingsByIds(embeddingsIds);
+    }
+
     public int removeAllSubjectEmbeddings(final String apiKey, final String subjectName) {
         int removed;
         if (StringUtils.isNotEmpty(subjectName)) {
             removed = subjectDao.removeAllSubjectEmbeddings(apiKey, subjectName);
             if (removed > 0) {
-                embeddingCacheProvider.ifPresent(
-                        apiKey,
-                        c -> c.removeEmbeddingsBySubjectName(subjectName)
-                );
+                embeddingCacheProvider.removeBySubjectName(apiKey, subjectName);
             }
         } else {
             removed = subjectDao.removeAllSubjectEmbeddings(apiKey);
@@ -92,10 +99,7 @@ public class SubjectService {
         var subject = subjectDao.deleteSubjectByName(apiKey, subjectName);
 
         // remove subject from cache if required
-        embeddingCacheProvider.ifPresent(
-                apiKey,
-                c -> c.removeEmbeddingsBySubjectName(subjectName)
-        );
+        embeddingCacheProvider.removeBySubjectName(apiKey, subjectName);
 
         return subject;
     }
@@ -104,10 +108,7 @@ public class SubjectService {
         var embedding = subjectDao.removeSubjectEmbedding(apiKey, embeddingId);
 
         // remove embedding from cache if required
-        embeddingCacheProvider.ifPresent(
-                apiKey,
-                c -> c.removeEmbedding(embedding)
-        );
+        embeddingCacheProvider.removeEmbedding(apiKey, EmbeddingProjection.from(embedding));
 
         return embedding;
     }
@@ -133,10 +134,7 @@ public class SubjectService {
 
         if (updated) {
             // update cache if required
-            embeddingCacheProvider.ifPresent(
-                    apiKey,
-                    c -> c.updateSubjectName(oldSubjectName, newSubjectName)
-            );
+            embeddingCacheProvider.updateSubjectName(apiKey, oldSubjectName, newSubjectName);
         }
 
         return updated;
@@ -206,10 +204,7 @@ public class SubjectService {
 
         final Pair<Subject, Embedding> pair = subjectDao.addEmbedding(modelKey, subjectName, embeddingToSave);
 
-        embeddingCacheProvider.ifPresent(
-                modelKey,
-                subjectCollection -> subjectCollection.addEmbedding(pair.getRight())
-        );
+        embeddingCacheProvider.addEmbedding(modelKey, pair.getRight());
 
         return pair;
     }

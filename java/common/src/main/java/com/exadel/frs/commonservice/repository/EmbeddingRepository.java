@@ -7,15 +7,21 @@ import com.exadel.frs.commonservice.entity.Subject;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import javax.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.NonNull;
 
 public interface EmbeddingRepository extends JpaRepository<Embedding, UUID> {
+
+    @Query("SELECT e FROM Embedding e JOIN FETCH e.subject WHERE e.id in :ids")
+    List<Embedding> findByIdIn(@Param("ids") @NonNull Iterable<UUID> ids);
 
     // Note: consumer should consume in transaction
     @Query("select " +
@@ -26,6 +32,9 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID> {
             "   e.subject s " +
             " where " +
             "   s.apiKey = :apiKey")
+    @QueryHints(
+        @QueryHint(name = org.hibernate.jpa.QueryHints.HINT_FETCH_SIZE, value = "10000")
+    )
     Stream<EnhancedEmbeddingProjection> findBySubjectApiKey(@Param("apiKey") String apiKey);
 
     @EntityGraph("embedding-with-subject")

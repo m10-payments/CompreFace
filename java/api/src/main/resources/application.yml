@@ -106,3 +106,22 @@ swagger:
   info:
     title: CompreFace - API
     version: 0.0.2-SNAPSHOT
+
+management:
+  health:
+    livenessState:
+      enabled: false
+    readinessState:
+      enabled: false
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: db, diskSpace, readinessState
+      show-details: "ALWAYS"
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: ""

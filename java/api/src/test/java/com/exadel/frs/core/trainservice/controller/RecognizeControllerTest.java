@@ -21,17 +21,17 @@ import com.exadel.frs.commonservice.sdk.faces.feign.dto.FacesBox;
 import com.exadel.frs.commonservice.sdk.faces.feign.dto.FindFacesResponse;
 import com.exadel.frs.commonservice.sdk.faces.feign.dto.FindFacesResult;
 import com.exadel.frs.commonservice.system.global.Constants;
+import com.exadel.frs.core.trainservice.EmbeddedPostgreSQLTest;
 import com.exadel.frs.core.trainservice.component.FaceClassifierPredictor;
 import com.exadel.frs.core.trainservice.config.IntegrationTest;
 import com.exadel.frs.core.trainservice.dto.Base64File;
-import com.exadel.frs.core.trainservice.service.NotificationReceiverService;
-import com.exadel.frs.core.trainservice.service.NotificationSenderService;
 import com.exadel.frs.core.trainservice.validation.ImageExtensionValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Base64;
+import java.util.List;
 import lombok.val;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -39,12 +39,11 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Base64;
-import java.util.List;
-
 import static com.exadel.frs.core.trainservice.system.global.Constants.API_V1;
 import static com.exadel.frs.core.trainservice.system.global.Constants.X_FRS_API_KEY_HEADER;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -53,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @IntegrationTest
 @AutoConfigureMockMvc
-class RecognizeControllerTest {
+class RecognizeControllerTest extends EmbeddedPostgreSQLTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -63,11 +62,6 @@ class RecognizeControllerTest {
 
     @MockBean
     private ImageExtensionValidator validator;
-
-    @Mock
-    private NotificationSenderService notificationSenderService;
-    @MockBean
-    private NotificationReceiverService  notificationReceiverService;
 
     @MockBean
     private FacesApiClient client;
