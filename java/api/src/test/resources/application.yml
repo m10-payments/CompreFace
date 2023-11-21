@@ -5,12 +5,6 @@ spring:
     enabled: false
   liquibase:
     enabled: false
-  datasource-pg:
-    driver-class-name: org.postgresql.Driver
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:6432/frs}
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:postgres}
-    continue-on-error: true
   jpa:
     properties:
       hibernate:
