@@ -35,8 +35,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import static java.lang.Math.min;
-
 @Component
 @RequiredArgsConstructor
 public class EuclideanDistanceClassifier implements Classifier {
@@ -50,32 +48,26 @@ public class EuclideanDistanceClassifier implements Classifier {
         INDArray inputFace = Nd4j.create(input);
         inputFace = normalizeOne(inputFace);
 
-        var embeddingCollection = embeddingCacheProvider.getOrLoad(apiKey);
-        final INDArray embeddings = embeddingCollection.getEmbeddings();
+        INDArray finalInputFace = inputFace;
+        return embeddingCacheProvider.getOrLoad(apiKey)
+                .doWithReadLock(
+                        ec -> {
+                            final INDArray embeddings = ec.getEmbeddings();
+                            var result = new ArrayList<Pair<Double, String>>();
+                            if (embeddings != null && embeddings.length() > 0) {
+                                val probabilities = recognize(finalInputFace, embeddings);
+                                val sortedIndexes = sortedIndexes(probabilities, resultCount);
+                                val indexMap = ec.getIndexMap();
+                                for (int sortedIndex : sortedIndexes) {
+                                    var prob = probabilities[sortedIndex];
+                                    var embedding = indexMap.get(sortedIndex);
+                                    result.add(Pair.of(prob, embedding.getSubjectName()));
+                                }
+                            }
+                            return result;
+                        }
+                );
 
-        var result = new ArrayList<Pair<Double, String>>();
-        if (embeddings != null && embeddings.length() > 0) {
-            val probabilities = recognize(inputFace, embeddings);
-            val sortedIndexes = sortedIndexes(probabilities);
-            val indexMap = embeddingCollection.getIndexMap();
-            int predictionCount = getPredictionCount(resultCount, sortedIndexes);
-
-            for (int i = 0; i < min(predictionCount, sortedIndexes.length); i++) {
-                var prob = probabilities[sortedIndexes[i]];
-                var embedding = indexMap.get(sortedIndexes[i]);
-
-                result.add(Pair.of(prob, embedding.getSubjectName()));
-            }
-        }
-        return result;
-    }
-
-    private int getPredictionCount(int resultCount, int[] argSort) {
-        if (resultCount == PREDICTION_COUNT_INFINITY) {
-            resultCount = argSort.length;
-        }
-
-        return resultCount;
     }
 
     @Override
@@ -95,7 +87,7 @@ public class EuclideanDistanceClassifier implements Classifier {
         final Optional<INDArray> rawEmbeddingOptional = embeddingCacheProvider.getOrLoad(apiKey)
                 .getRawEmbeddingById(embeddingId);
 
-        if (rawEmbeddingOptional.isEmpty())  {
+        if (rawEmbeddingOptional.isEmpty()) {
             return (double) 0;
         }
 
@@ -155,10 +147,11 @@ public class EuclideanDistanceClassifier implements Classifier {
      * @param probabilities array of probability
      * @return sorted array of indexes (highest probability index first)
      */
-    private static int[] sortedIndexes(double[] probabilities) {
+    private static int[] sortedIndexes(double[] probabilities, int limit) {
         return IntStream.range(0, probabilities.length)
                 .boxed()
                 .sorted((index1, index2) -> -Doubles.compare(probabilities[index1], probabilities[index2]))
+                .limit(limit == PREDICTION_COUNT_INFINITY ? Long.MAX_VALUE : limit)
                 .mapToInt(index -> index)
                 .toArray();
     }
