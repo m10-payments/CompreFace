@@ -19,7 +19,6 @@ package com.exadel.frs.core.trainservice.component;
 import com.exadel.frs.core.trainservice.component.classifiers.Classifier;
 import java.util.List;
 import java.util.UUID;
-
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
@@ -36,6 +35,15 @@ public class FaceClassifierPredictor {
 
     public Double verify(final String modelKey, final double[] input, final UUID embeddingId) {
         return classifier.verify(input, modelKey, embeddingId);
+    }
+
+    public List<Pair<UUID, Double>> verifySubject(
+            final String modelKey,
+            final double[] input,
+            String subjectName,
+            final int resultCount
+    ) {
+        return classifier.verifySubject(modelKey, input, subjectName, resultCount);
     }
 
     public double[] verify(final double[] sourceImageEmbedding, final double[][] targetImageEmbedding) {

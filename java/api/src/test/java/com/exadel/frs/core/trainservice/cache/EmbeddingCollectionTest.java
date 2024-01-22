@@ -16,14 +16,17 @@
 
 package com.exadel.frs.core.trainservice.cache;
 
-import static com.exadel.frs.core.trainservice.ItemsBuilder.makeEmbedding;
-import static com.exadel.frs.core.trainservice.ItemsBuilder.makeEnhancedEmbeddingProjection;
-import static org.assertj.core.api.Assertions.assertThat;
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
 import com.exadel.frs.commonservice.entity.EnhancedEmbeddingProjection;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static com.exadel.frs.core.trainservice.ItemsBuilder.makeEmbedding;
+import static com.exadel.frs.core.trainservice.ItemsBuilder.makeEnhancedEmbeddingProjection;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class EmbeddingCollectionTest {
 
@@ -40,14 +43,15 @@ class EmbeddingCollectionTest {
     @Test
     void testAddToEmpty() {
         var embeddingCollection = EmbeddingCollection.from(Stream.of());
-        assertThat(embeddingCollection.getEmbeddings().isEmpty()).isTrue();
-        assertThat(embeddingCollection.getIndexMap()).isEmpty();
-        assertThat(embeddingCollection.getProjections()).isEmpty();
+        Assertions.assertThat(embeddingCollection.exposeMap()).isEmpty();
 
-        embeddingCollection.addEmbedding(makeEmbedding("A", API_KEY));
+        var embedding = makeEmbedding("A", API_KEY);
+        embedding.setId(UUID.randomUUID());
+        embeddingCollection.addEmbedding(embedding);
 
-        assertThat(embeddingCollection.getEmbeddings().isEmpty()).isFalse();
-        assertThat(embeddingCollection.getProjections()).hasSize(1);
+        assertThat(embeddingCollection.exposeMap()).hasSize(1);
+        assertThat(embeddingCollection.exposeMap().get("A"))
+                .containsEntry(embedding.getId(), MatrixUtils.createRealVector(embedding.getEmbedding()));
     }
 
     @Test
@@ -58,13 +62,13 @@ class EmbeddingCollectionTest {
         var projections = new EnhancedEmbeddingProjection[]{projection1, projection2, projection3};
         var embeddingCollection = EmbeddingCollection.from(Stream.of(projections));
 
-        assertThat(embeddingCollection).isNotNull();
-        assertThat(embeddingCollection.getIndexMap()).isNotNull();
-        assertThat(embeddingCollection.getIndexMap()).hasSize(projections.length);
-
-        assertThat(embeddingCollection.getIndexMap()).containsEntry(0, EmbeddingProjection.from(projection1));
-        assertThat(embeddingCollection.getIndexMap()).containsEntry(1, EmbeddingProjection.from(projection2));
-        assertThat(embeddingCollection.getIndexMap()).containsEntry(2, EmbeddingProjection.from(projection3));
+        assertThat(embeddingCollection.exposeMap()).hasSize(projections.length);
+        assertThat(embeddingCollection.exposeMap().get("A"))
+                .containsEntry(projection1.getEmbeddingId(), MatrixUtils.createRealVector(projection1.getEmbeddingData()));
+        assertThat(embeddingCollection.exposeMap().get("B"))
+                .containsEntry(projection2.getEmbeddingId(), MatrixUtils.createRealVector(projection2.getEmbeddingData()));
+        assertThat(embeddingCollection.exposeMap().get("C"))
+                .containsEntry(projection3.getEmbeddingId(), MatrixUtils.createRealVector(projection3.getEmbeddingData()));
     }
 
     @Test
@@ -76,12 +80,14 @@ class EmbeddingCollectionTest {
         };
         var embeddingCollection = EmbeddingCollection.from(Stream.of(projections));
         var newEmbedding = makeEmbedding("D", API_KEY);
+        newEmbedding.setId(UUID.randomUUID());
 
-        var key = embeddingCollection.addEmbedding(newEmbedding);
-        assertThat(key).isNotNull();
+        var projection = embeddingCollection.addEmbedding(newEmbedding);
+        assertThat(projection).isNotNull();
 
-        assertThat(embeddingCollection.getProjections()).hasSize(projections.length + 1);
-        assertThat(embeddingCollection.getIndexMap()).containsEntry(projections.length, EmbeddingProjection.from(newEmbedding));
+        assertThat(embeddingCollection.exposeMap()).hasSize(projections.length + 1);
+        assertThat(embeddingCollection.exposeMap().get("D"))
+                .containsEntry(newEmbedding.getId(), MatrixUtils.createRealVector(newEmbedding.getEmbedding()));
     }
 
     @Test
@@ -94,8 +100,10 @@ class EmbeddingCollectionTest {
 
         embeddingCollection.removeEmbedding(EmbeddingProjection.from(projection1));
 
-        assertThat(embeddingCollection.getProjections()).hasSize(projections.length - 1);
-        assertThat(embeddingCollection.getIndexMap()).containsEntry(0, EmbeddingProjection.from(projection2));
-        assertThat(embeddingCollection.getIndexMap()).containsEntry(1, EmbeddingProjection.from(projection3));
+        assertThat(embeddingCollection.exposeMap()).hasSize(projections.length - 1);
+        assertThat(embeddingCollection.exposeMap().get("B"))
+                .containsEntry(projection2.getEmbeddingId(), MatrixUtils.createRealVector(projection2.getEmbeddingData()));
+        assertThat(embeddingCollection.exposeMap().get("C"))
+                .containsEntry(projection3.getEmbeddingId(), MatrixUtils.createRealVector(projection3.getEmbeddingData()));
     }
 }

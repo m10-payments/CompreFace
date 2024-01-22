@@ -16,26 +16,28 @@
 
 package com.exadel.frs.core.trainservice.component.classifiers;
 
+import com.exadel.frs.commonservice.exception.IncorrectImageIdException;
 import com.exadel.frs.commonservice.sdk.faces.FacesApiClient;
 import com.exadel.frs.commonservice.sdk.faces.exception.FacesServiceException;
 import com.exadel.frs.commonservice.sdk.faces.feign.dto.FacesStatusResponse;
 import com.exadel.frs.core.trainservice.cache.EmbeddingCacheProvider;
 import com.google.common.primitives.Doubles;
-import lombok.RequiredArgsConstructor;
-import lombok.val;
-import org.apache.commons.lang3.tuple.Pair;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.ops.transforms.Transforms;
-import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.IntStream;
-
-import static java.lang.Math.min;
+import java.util.stream.Collectors;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.util.FastMath;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -47,41 +49,24 @@ public class EuclideanDistanceClassifier implements Classifier {
 
     @Override
     public List<Pair<Double, String>> predict(final double[] input, final String apiKey, final int resultCount) {
-        INDArray inputFace = Nd4j.create(input);
-        inputFace = normalizeOne(inputFace);
-
-        var embeddingCollection = embeddingCacheProvider.getOrLoad(apiKey);
-        final INDArray embeddings = embeddingCollection.getEmbeddings();
-
-        var result = new ArrayList<Pair<Double, String>>();
-        if (embeddings != null && embeddings.length() > 0) {
-            val probabilities = recognize(inputFace, embeddings);
-            val sortedIndexes = sortedIndexes(probabilities);
-            val indexMap = embeddingCollection.getIndexMap();
-            int predictionCount = getPredictionCount(resultCount, sortedIndexes);
-
-            for (int i = 0; i < min(predictionCount, sortedIndexes.length); i++) {
-                var prob = probabilities[sortedIndexes[i]];
-                var embedding = indexMap.get(sortedIndexes[i]);
-
-                result.add(Pair.of(prob, embedding.getSubjectName()));
-            }
-        }
-        return result;
-    }
-
-    private int getPredictionCount(int resultCount, int[] argSort) {
-        if (resultCount == PREDICTION_COUNT_INFINITY) {
-            resultCount = argSort.length;
-        }
-
-        return resultCount;
+        var inputFace = MatrixUtils.createRealVector(input).unitVector();
+        var coefficients = getSimilarityCoefficients();
+        return embeddingCacheProvider.getOrLoad(apiKey)
+                .visit(
+                        ec -> ec.entrySet()
+                                .stream()
+                                .flatMap(e -> e.getValue().values().stream().map(v -> Pair.of(e.getKey(), v)))
+                                .map(e -> Pair.of(calculateSimilarity(e.getValue().getDistance(inputFace), coefficients), e.getKey()))
+                                .sorted((p1, p2) -> -Doubles.compare(p1.getLeft(), p2.getLeft()))
+                                .limit(resultCount == PREDICTION_COUNT_INFINITY ? Long.MAX_VALUE : resultCount)
+                                .collect(Collectors.toList())
+                );
     }
 
     @Override
     public double[] verify(double[] sourceImageEmbedding, double[][] targetImageEmbedding) {
-        final INDArray sourceNormalized = normalizeOne(Nd4j.create(sourceImageEmbedding));
-        final INDArray targetNormalized = normalize(Nd4j.create(targetImageEmbedding));
+        var sourceNormalized = MatrixUtils.createRealVector(sourceImageEmbedding).unitVector();
+        var targetNormalized = normalizeRowsInMatrix(targetImageEmbedding);
 
         return recognize(sourceNormalized, targetNormalized);
     }
@@ -92,74 +77,94 @@ public class EuclideanDistanceClassifier implements Classifier {
             return (double) 0;
         }
 
-        final Optional<INDArray> rawEmbeddingOptional = embeddingCacheProvider.getOrLoad(apiKey)
-                .getRawEmbeddingById(embeddingId);
-
-        if (rawEmbeddingOptional.isEmpty())  {
-            return (double) 0;
-        }
+        var embedding = embeddingCacheProvider.getOrLoad(apiKey)
+                .getRawEmbeddingById(embeddingId)
+                .orElseThrow(IncorrectImageIdException::new);
 
         var probabilities = recognize(
-                normalizeOne(Nd4j.create(input)),
-                rawEmbeddingOptional.get()
+                MatrixUtils.createRealVector(input).unitVector(),
+                MatrixUtils.createRealMatrix(new double[][]{embedding})
         );
 
         return probabilities[0];
     }
 
-    private INDArray normalizeOne(final INDArray embeddings) {
-        val embeddings1Norm = embeddings.norm2();
-
-        return embeddings.divi(embeddings1Norm);
+    @NonNull
+    public List<Pair<UUID, Double>> verifySubject(
+            @NonNull final String apiKey,
+            @NonNull final double[] input,
+            @NonNull final String subjectName,
+            final int resultCount
+    ) {
+        final var normalizedEmbedding = MatrixUtils.createRealVector(input).unitVector();
+        return embeddingCacheProvider.getEmbeddings(apiKey, subjectName)
+                .map(embeddings -> recognize(normalizedEmbedding, embeddings, resultCount))
+                .orElse(List.of());
     }
 
-    public double[] normalizeOne(final double[] rawEmbeddings) {
-        INDArray embeddings = Nd4j.create(rawEmbeddings);
-        embeddings = normalizeOne(embeddings);
-
-        return embeddings.toDoubleVector();
-    }
-
-    private INDArray normalize(final INDArray embeddings) {
-        val embeddingsNorm = embeddings.norm2(1);
-
-        return embeddings.transposei().divi(embeddingsNorm).transposei();
-    }
-
-    private double[] recognize(final INDArray newFace, final INDArray existingFaces) {
-        val distance = euclidean_distance(newFace, existingFaces);
-
-        return calculateSimilarities(distance).toDoubleVector();
-    }
-
-    private INDArray calculateSimilarities(INDArray distance) {
-        FacesStatusResponse status = facesApiClient.getStatus();
-        if (status == null || status.getSimilarityCoefficients() == null || status.getSimilarityCoefficients().isEmpty()) {
-            throw new FacesServiceException("No status information received");
-        }
-
-        List<Double> coefficients = status.getSimilarityCoefficients();
-        // (tanh ((coef0 - distance) * coef1) + 1) / 2
-        return Transforms.tanh(distance.rsubi(coefficients.get(0)).muli(coefficients.get(1)), false).addi(1).divi(2);
-    }
-
-    private static INDArray euclidean_distance(final INDArray newFace, INDArray existingFaces) {
-        existingFaces = existingFaces.subi(newFace);
-
-        return existingFaces.norm2(1);
+    public double[] normalizeOne(double[] input) {
+        return new ArrayRealVector(input).unitVector().toArray();
     }
 
     /**
-     * Create and sort array of indexes according highest probabilities.
-     *
-     * @param probabilities array of probability
-     * @return sorted array of indexes (highest probability index first)
+     * (tanh ((coef0 - distance) * coef1) + 1) / 2
+     * Package protected for testing purposes
      */
-    private static int[] sortedIndexes(double[] probabilities) {
-        return IntStream.range(0, probabilities.length)
-                .boxed()
-                .sorted((index1, index2) -> -Doubles.compare(probabilities[index1], probabilities[index2]))
-                .mapToInt(index -> index)
+    double calculateSimilarity(Double value, SimilarityCoefficients coefficients) {
+        return (FastMath.tanh((coefficients.getCoefficient0() - value) * coefficients.getCoefficient1()) + 1) / 2;
+    }
+
+    private RealMatrix normalizeRowsInMatrix(final double[][] input) {
+        var resultMatrix = MatrixUtils.createRealMatrix(input.length, input[0].length);
+        for (int i = 0; i < input.length; i++) {
+            var vector = MatrixUtils.createRealVector(input[i]).unitVector();
+            resultMatrix.setRowVector(i, vector);
+        }
+        return resultMatrix;
+    }
+
+    private double[] recognize(final RealVector newFace, final RealMatrix existingFaces) {
+        var coefficients = getSimilarityCoefficients();
+        return Arrays.stream(euclideanDistance(newFace, existingFaces))
+                .map(d -> calculateSimilarity(d, coefficients))
                 .toArray();
+    }
+
+    private SimilarityCoefficients getSimilarityCoefficients() {
+        FacesStatusResponse status = facesApiClient.getStatus();
+        return Optional.ofNullable(status)
+                .map(FacesStatusResponse::getSimilarityCoefficients)
+                .filter(cfs -> cfs.size() >= 2)
+                .map(cfs -> new SimilarityCoefficients(cfs.get(0), cfs.get(1)))
+                .orElseThrow(() -> new FacesServiceException("No status information received"));
+    }
+
+    private List<Pair<UUID, Double>> recognize(RealVector normalizedEmbedding, Map<UUID, RealVector> embeddings, int resultCount) {
+        var coefficients = getSimilarityCoefficients();
+        return embeddings.entrySet()
+                .stream()
+                .map(e -> Pair.of(e.getKey(), calculateSimilarity(e.getValue().getDistance(normalizedEmbedding), coefficients)))
+                .sorted((p1, p2) -> -Doubles.compare(p1.getRight(), p2.getRight()))
+                .limit(resultCount)
+                .collect(Collectors.toList());
+    }
+
+    private static double[] euclideanDistance(final RealVector newFace, RealMatrix existingFaces) {
+        int numRows = existingFaces.getRowDimension();
+        // Create an array to hold the distances
+        double[] distances = new double[numRows];
+        // Calculate the Euclidean distance between each row and the vector
+        for (int i = 0; i < numRows; i++) {
+            var rowVector = existingFaces.getRowVector(i);
+            distances[i] = rowVector.getDistance(newFace);
+        }
+        return distances;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    static final class SimilarityCoefficients {
+        private final double coefficient0;
+        private final double coefficient1;
     }
 }

@@ -4,6 +4,8 @@ import com.exadel.frs.core.trainservice.config.IntegrationTest;
 import com.exadel.frs.core.trainservice.service.NotificationReceiverService;
 import com.exadel.frs.core.trainservice.service.NotificationSenderService;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider;
+import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseType;
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import liquibase.Contexts;
@@ -23,7 +25,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ActiveProfiles("test")
 @IntegrationTest
 @ExtendWith(SpringExtension.class)
-@AutoConfigureEmbeddedDatabase(beanName = "dsPg")
+@AutoConfigureEmbeddedDatabase(type = DatabaseType.POSTGRES, provider = DatabaseProvider.ZONKY)
 public class EmbeddedPostgreSQLTest {
 
     @MockBean
