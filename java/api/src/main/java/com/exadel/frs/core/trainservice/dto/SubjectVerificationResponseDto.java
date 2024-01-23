@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
@@ -28,6 +29,10 @@ public class SubjectVerificationResponseDto extends FaceProcessResponse {
         if (!Boolean.TRUE.equals(processImageParams.getStatus())) {
             setPluginsVersions(null);
             result.setExecutionTime(null);
+        }
+        var facePlugins = processImageParams.getFacePlugins();
+        if (StringUtils.isBlank(facePlugins) || !facePlugins.contains(CALCULATOR)) {
+            result.setEmbedding(null);
         }
         return this;
     }
