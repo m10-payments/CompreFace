@@ -106,9 +106,11 @@ class EmbeddingCacheProviderTest {
         var actual = embeddingCacheProvider.getOrLoad(API_KEY);
 
         assertThat(actual, notNullValue());
-        assertThat(actual.getProjections(), notNullValue());
-        assertThat(actual.getProjections().size(), is(projections.length));
-        assertThat(actual.getEmbeddings(), notNullValue());
+        assertThat(actual.exposeMap(), notNullValue());
+        assertThat(actual.exposeMap().size(), is(projections.length));
+        assertThat(actual.exposeMap().get("A").size(), is(1));
+        assertThat(actual.exposeMap().get("B").size(), is(1));
+        assertThat(actual.exposeMap().get("C").size(), is(1));
     }
 
     @Test
@@ -123,8 +125,8 @@ class EmbeddingCacheProviderTest {
 
         // assert
         var embeddings = embeddingCacheProvider.getOrLoad(API_KEY);
-        Assertions.assertThat(embeddings.getEmbeddings().size(0)).isEqualTo(1);
-        Assertions.assertThat(embeddings.getProjections()).containsOnly(new EmbeddingProjection(EMBEDDING_ID_2, SUBJECT_NAME));
+        Assertions.assertThat(embeddings.exposeMap()).hasSize(1);
+        Assertions.assertThat(embeddings.exposeMap().get(SUBJECT_NAME)).hasSize(1);
 
         verify(notificationSenderService, times(1)).notifyCacheChange(
             buildCacheActionDto(CacheAction.REMOVE_EMBEDDINGS, new RemoveEmbeddings(Map.of(SUBJECT_NAME, List.of(EMBEDDING_ID_1))))
@@ -143,11 +145,8 @@ class EmbeddingCacheProviderTest {
 
         // assert
         var embeddings = embeddingCacheProvider.getOrLoad(API_KEY);
-        Assertions.assertThat(embeddings.getEmbeddings().size(0)).isEqualTo(2);
-        Assertions.assertThat(embeddings.getProjections()).containsExactly(
-            new EmbeddingProjection(EMBEDDING_ID_1, NEW_SUBJECT_NAME),
-            new EmbeddingProjection(EMBEDDING_ID_2, NEW_SUBJECT_NAME)
-        );
+        Assertions.assertThat(embeddings.exposeMap()).hasSize(1);
+        Assertions.assertThat(embeddings.exposeMap().get(NEW_SUBJECT_NAME)).hasSize(2);
 
         verify(notificationSenderService, times(1)).notifyCacheChange(
             buildCacheActionDto(CacheAction.RENAME_SUBJECTS, new RenameSubjects(Map.of(SUBJECT_NAME, NEW_SUBJECT_NAME)))
@@ -166,8 +165,7 @@ class EmbeddingCacheProviderTest {
 
         // assert
         var embeddings = embeddingCacheProvider.getOrLoad(API_KEY);
-        Assertions.assertThat(embeddings.getEmbeddings().size(0)).isZero();
-        Assertions.assertThat(embeddings.getProjections()).isEmpty();
+        Assertions.assertThat(embeddings.exposeMap()).isEmpty();
 
         verify(notificationSenderService, times(1)).notifyCacheChange(
             buildCacheActionDto(CacheAction.REMOVE_SUBJECTS, new RemoveSubjects(List.of(SUBJECT_NAME)))
@@ -181,8 +179,8 @@ class EmbeddingCacheProviderTest {
 
         // assert
         var embeddings = embeddingCacheProvider.getOrLoad(API_KEY);
-        Assertions.assertThat(embeddings.getEmbeddings().size(0)).isEqualTo(1);
-        Assertions.assertThat(embeddings.getProjections()).containsOnly(new EmbeddingProjection(EMBEDDING_ID_2, SUBJECT_NAME));
+        Assertions.assertThat(embeddings.exposeMap()).hasSize(1);
+        Assertions.assertThat(embeddings.exposeMap().get(SUBJECT_NAME)).hasSize(1);
 
         verify(notificationSenderService, times(1)).notifyCacheChange(
             buildCacheActionDto(CacheAction.ADD_EMBEDDINGS, new AddEmbeddings(List.of(EMBEDDING_ID_2)))
@@ -199,10 +197,7 @@ class EmbeddingCacheProviderTest {
         embeddingCacheProvider.invalidate(API_KEY);
 
         // assert
-        embeddingCacheProvider.exposeIfPresent(API_KEY, ec -> {
-            Assertions.assertThat(ec.getEmbeddings().size(0)).isZero();
-            Assertions.assertThat(ec.getProjections()).isEmpty();
-        });
+        embeddingCacheProvider.exposeIfPresent(API_KEY, ec -> Assertions.assertThat(ec.exposeMap()).isEmpty());
         verify(notificationSenderService).notifyCacheChange(
             buildCacheActionDto(
                 CacheAction.INVALIDATE,
@@ -226,10 +221,7 @@ class EmbeddingCacheProviderTest {
         embeddingCacheProvider.receiveInvalidateCache(API_KEY);
 
         // assert
-        embeddingCacheProvider.exposeIfPresent(API_KEY, ec -> {
-            Assertions.assertThat(ec.getEmbeddings().size(0)).isZero();
-            Assertions.assertThat(ec.getProjections()).isEmpty();
-        });
+        embeddingCacheProvider.exposeIfPresent(API_KEY, ec -> Assertions.assertThat(ec.exposeMap()).isEmpty());
     }
 
     private static <T> CacheActionDto<T> buildCacheActionDto(

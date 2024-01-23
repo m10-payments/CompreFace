@@ -13,9 +13,9 @@ import com.exadel.frs.commonservice.system.global.ImageProperties;
 import com.exadel.frs.core.trainservice.dto.EmbeddingInfo;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Nullable;
 import javax.transaction.Transactional;
 import java.util.*;
 

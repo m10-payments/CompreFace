@@ -4,162 +4,119 @@ import com.exadel.frs.commonservice.entity.Embedding;
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
 import com.exadel.frs.commonservice.entity.EnhancedEmbeddingProjection;
 import com.exadel.frs.commonservice.exception.IncorrectImageIdException;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.val;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.NDArrayIndex;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealVector;
+import org.springframework.data.util.Pair;
+import org.springframework.lang.NonNull;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class EmbeddingCollection {
 
-    private final BiMap<EmbeddingProjection, Integer> projection2Index;
-    private INDArray embeddings;
+    private final ConcurrentMap<String, Map<UUID, RealVector>> mapping;
 
     public static EmbeddingCollection from(final Stream<EnhancedEmbeddingProjection> stream) {
-        val rawEmbeddings = new LinkedList<double[]>();
-        val projections2Index = new HashMap<EmbeddingProjection, Integer>();
-        val index = new AtomicInteger(); // just to bypass 'final' variables restriction inside lambdas
-
-        stream.forEach(projection -> {
-            projections2Index.put(EmbeddingProjection.from(projection), index.getAndIncrement());
-            rawEmbeddings.add(projection.getEmbeddingData());
-        });
-
-        return new EmbeddingCollection(
-                HashBiMap.create(projections2Index),
-                rawEmbeddings.isEmpty()
-                        ? Nd4j.empty()
-                        : Nd4j.create(rawEmbeddings.toArray(double[][]::new))
-        );
+        // we copy vector here just in case
+        var newMap = stream.map(e -> Map.entry(e.getSubjectName(), Pair.of(e.getEmbeddingId(), MatrixUtils.createRealVector(e.getEmbeddingData()))))
+                .collect(
+                        Collectors.toConcurrentMap(
+                                Entry::getKey,
+                                entry -> {
+                                    Map<UUID, RealVector> map = new ConcurrentHashMap<>();
+                                    map.put(entry.getValue().getFirst(), entry.getValue().getSecond());
+                                    return map;
+                                },
+                                (map1, map2) -> {
+                                    map1.putAll(map2);
+                                    return map1;
+                                }
+                        )
+                );
+        return new EmbeddingCollection(newMap);
     }
 
-    public Map<Integer, EmbeddingProjection> getIndexMap() {
-        // returns index to projection map
-        return Collections.unmodifiableMap(projection2Index.inverse());
+    public <T> T visit(Function<Map<String, Map<UUID, RealVector>>, T> readAndDo) {
+        return readAndDo.apply(exposeMap());
     }
 
-    public Set<EmbeddingProjection> getProjections() {
-        return Collections.unmodifiableSet(projection2Index.keySet());
+    // package private for test purposes
+    Map<String, Map<UUID, RealVector>> exposeMap() {
+        return Collections.unmodifiableMap(mapping);
     }
 
-    private int getSize() {
-        // should be invoked only if underlying array is not empty!
-        return (int) embeddings.size(0);
+    public void updateSubjectName(String oldSubjectName, String newSubjectName) {
+        mapping.put(newSubjectName, mapping.remove(oldSubjectName));
     }
 
-    /**
-     * NOTE: current method returns COPY! Each time you invoke it, memory consumed, be careful!
-     *
-     * @return copy of underlying embeddings array.
-     */
-    public INDArray getEmbeddings() {
-        return embeddings.dup();
+    public EmbeddingProjection addEmbedding(final Embedding embedding) {
+        var id = embedding.getId();
+        var realVector = MatrixUtils.createRealVector(embedding.getEmbedding());
+        mapping.computeIfAbsent(embedding.getSubject().getSubjectName(), k -> new ConcurrentHashMap<>())
+                .put(id, realVector);
+        return new EmbeddingProjection(id, embedding.getSubject().getSubjectName());
     }
 
-    public synchronized void updateSubjectName(String oldSubjectName, String newSubjectName) {
-        final List<EmbeddingProjection> projections = projection2Index.keySet()
-                .stream()
-                .filter(projection -> projection.getSubjectName().equals(oldSubjectName))
-                .collect(Collectors.toList());
-
-        projections.forEach(projection -> projection2Index.put(
-                projection.withNewSubjectName(newSubjectName),
-                projection2Index.remove(projection)
-        ));
+    public void removeEmbeddingsBySubjectName(String subjectName) {
+        mapping.remove(subjectName);
     }
 
-    public synchronized EmbeddingProjection addEmbedding(final Embedding embedding) {
-        final var projection = EmbeddingProjection.from(embedding);
-
-        final INDArray array = Nd4j.create(new double[][]{embedding.getEmbedding()});
-
-        embeddings = embeddings.isEmpty()
-                ? array
-                : Nd4j.concat(0, embeddings, array);
-
-        projection2Index.put(
-                projection,
-                getSize() - 1
-        );
-
-        return projection;
+    public EmbeddingProjection removeEmbedding(EmbeddingProjection projection) {
+        var wasRemoved = new AtomicBoolean(false);
+        mapping.compute(
+                projection.getSubjectName(),
+                (k, v) -> {
+                    if (v == null) {
+                        return null;
+                    }
+                    if (v.remove(projection.getEmbeddingId()) != null) {
+                        wasRemoved.set(true);
+                        if (v.isEmpty()) {
+                            return null;
+                        }
+                    }
+                    return v;
+                });
+        return wasRemoved.get() ? projection : null;
     }
 
-    public synchronized Collection<EmbeddingProjection> removeEmbeddingsBySubjectName(String subjectName) {
-        // not efficient at ALL! review current approach!
-
-        final List<EmbeddingProjection> toRemove = projection2Index.keySet().stream()
-                .filter(projection -> projection.getSubjectName().equals(subjectName))
-                .collect(Collectors.toList());
-
-        toRemove.forEach(this::removeEmbedding); // <- rethink
-
-        return toRemove;
-    }
-
-    public synchronized EmbeddingProjection removeEmbedding(Embedding embedding) {
-        return removeEmbedding(EmbeddingProjection.from(embedding));
-    }
-
-    public synchronized EmbeddingProjection removeEmbedding(EmbeddingProjection projection) {
-        if (projection2Index.isEmpty()) {
-            return null;
-        }
-
-        var index = projection2Index.remove(projection);
-
-        // remove embedding by concatenating sub lists [0, index) + [index + 1, size),
-        // thus size of resulting array is decreased by one
-        embeddings = Nd4j.concat(
-                0,
-                embeddings.get(NDArrayIndex.interval(0, index), NDArrayIndex.all()),
-                embeddings.get(NDArrayIndex.interval(index + 1, getSize()), NDArrayIndex.all())
-        );
-
-        // shifting (-1) all indexes, greater than current one
-        projection2Index.entrySet()
-                .stream()
-                .filter(entry -> entry.getValue() > index)
-                .sorted(Map.Entry.comparingByValue())
-                .forEach(e -> projection2Index.replace(e.getKey(), e.getValue(), e.getValue() - 1));
-
-        return projection;
-    }
-
-    public synchronized Optional<INDArray> getRawEmbeddingById(UUID embeddingId) {
+    public Optional<double[]> getRawEmbeddingById(UUID embeddingId) {
         return findByEmbeddingId(
                 embeddingId,
                 // return duplicated row
-                entry -> embeddings.getRow(entry.getValue(), true).dup()
+                entry -> entry.getValue().getValue().toArray()
         );
     }
 
-    public synchronized Optional<String> getSubjectNameByEmbeddingId(UUID embeddingId) {
+    public Optional<String> getSubjectNameByEmbeddingId(UUID embeddingId) {
         return findByEmbeddingId(
                 embeddingId,
-                entry -> entry.getKey().getSubjectName()
+                Entry::getKey
         );
     }
 
-    private <T> Optional<T> findByEmbeddingId(UUID embeddingId, Function<Map.Entry<EmbeddingProjection, Integer>, T> func) {
-        validImageId(embeddingId);
+    public Optional<Map<UUID, RealVector>> getEmbeddingsBySubjectName(@NonNull String subjectName) {
+        return Optional.ofNullable(mapping.get(subjectName));
+    }
 
-        return Optional.ofNullable(projection2Index.entrySet()
-                .stream()
-                .filter(entry ->  embeddingId.equals(entry.getKey().getEmbeddingId()))
+    private <T> Optional<T> findByEmbeddingId(UUID embeddingId, Function<Map.Entry<String, Map.Entry<UUID, RealVector>>, T> func) {
+        validImageId(embeddingId);
+        return mapping.entrySet().stream()
+                .filter(entry -> entry.getValue().containsKey(embeddingId))
                 .findFirst()
-                .map(func)
-                .orElseThrow(IncorrectImageIdException::new));
+                .map(entry -> Map.entry(entry.getKey(), Map.entry(embeddingId, entry.getValue().get(embeddingId))))
+                .map(func);
     }
 
     private void validImageId(UUID embeddingId) {

@@ -14,12 +14,15 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.math3.linear.RealVector;
 import org.springframework.stereotype.Component;
 
 import static com.exadel.frs.core.trainservice.system.global.Constants.SERVER_UUID;
@@ -84,6 +87,10 @@ public class EmbeddingCacheProvider {
     public void addEmbedding(String apiKey, Embedding embedding) {
         getOrLoad(apiKey).addEmbedding(embedding);
         notifyCacheEvent(CacheAction.ADD_EMBEDDINGS, apiKey, new AddEmbeddings(List.of(embedding.getId())));
+    }
+
+    public Optional<Map<UUID, RealVector>> getEmbeddings(String apiKey, String subjectName) {
+        return getOrLoad(apiKey).getEmbeddingsBySubjectName(subjectName);
     }
 
     /**

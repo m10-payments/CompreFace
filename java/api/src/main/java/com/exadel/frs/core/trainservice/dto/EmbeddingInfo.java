@@ -1,9 +1,8 @@
 package com.exadel.frs.core.trainservice.dto;
 
-import lombok.Value;
-
-import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import lombok.Value;
+import org.springframework.lang.Nullable;
 
 @Value
 public class EmbeddingInfo {
