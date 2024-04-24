@@ -25,6 +25,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -69,7 +70,7 @@ public class SubjectService {
     }
 
     public List<Embedding> loadEmbeddingsById(Iterable<UUID> embeddingsIds) {
-       return subjectDao.loadAllEmbeddingsByIds(embeddingsIds);
+        return subjectDao.loadAllEmbeddingsByIds(embeddingsIds);
     }
 
     public int removeAllSubjectEmbeddings(final String apiKey, final String subjectName) {
@@ -112,12 +113,13 @@ public class SubjectService {
 
         return embedding;
     }
-    public List<Embedding> removeSubjectEmbeddings(final String apiKey, final List<UUID> embeddingIds){
+
+    public List<Embedding> removeSubjectEmbeddings(final String apiKey, final List<UUID> embeddingIds) {
         List<Embedding> result = new ArrayList<>();
-        for (UUID id: embeddingIds) {
+        for (UUID id : embeddingIds) {
             try {
                 result.add(removeSubjectEmbedding(apiKey, id));
-            } catch (EmbeddingNotFoundException e){
+            } catch (EmbeddingNotFoundException e) {
                 e.printStackTrace();
             }
         }
@@ -144,7 +146,9 @@ public class SubjectService {
             final String base64photo,
             final String subjectName,
             final Double detProbThreshold,
-            final String modelKey) {
+            final String modelKey,
+            Map<String, String> attributes
+    ) {
         var findFacesResponse = facesApiClient.findFacesBase64WithCalculator(
                 base64photo,
                 MAX_FACES_TO_RECOGNIZE,
@@ -156,7 +160,8 @@ public class SubjectService {
                 Base64.getDecoder().decode(base64photo),
                 subjectName,
                 modelKey,
-                findFacesResponse
+                findFacesResponse,
+                attributes
         );
     }
 
@@ -164,7 +169,8 @@ public class SubjectService {
             final MultipartFile file,
             final String subjectName,
             final Double detProbThreshold,
-            final String modelKey
+            final String modelKey,
+            Map<String, String> attributes
     ) throws IOException {
         var findFacesResponse = facesApiClient.findFacesWithCalculator(
                 file,
@@ -177,14 +183,17 @@ public class SubjectService {
                 file.getBytes(),
                 subjectName,
                 modelKey,
-                findFacesResponse
+                findFacesResponse,
+                attributes
         );
     }
 
     private Pair<Subject, Embedding> saveCalculatedEmbedding(byte[] content,
                                                              String subjectName,
                                                              String modelKey,
-                                                             FindFacesResponse findFacesResponse) {
+                                                             FindFacesResponse findFacesResponse,
+                                                             Map<String, String> attributes
+    ) {
 
         // if we are here => at least one face exists
         List<FindFacesResult> result = findFacesResponse.getResult();
@@ -199,7 +208,8 @@ public class SubjectService {
         var embeddingToSave = new EmbeddingInfo(
                 findFacesResponse.getPluginsVersions().getCalculator(),
                 normalized,
-                content
+                content,
+                attributes
         );
 
         final Pair<Subject, Embedding> pair = subjectDao.addEmbedding(modelKey, subjectName, embeddingToSave);

@@ -1,10 +1,13 @@
 package com.exadel.frs.core.trainservice.service;
 
 import com.exadel.frs.commonservice.entity.*;
+import com.exadel.frs.commonservice.repository.EmbeddingRepository;
 import com.exadel.frs.core.trainservice.DbHelper;
 import com.exadel.frs.core.trainservice.EmbeddedPostgreSQLTest;
 import com.exadel.frs.core.trainservice.dao.SubjectDao;
 import com.exadel.frs.core.trainservice.system.global.Constants;
+import java.util.Map;
+import javax.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,6 +29,9 @@ class EmbeddingServiceTest extends EmbeddedPostgreSQLTest {
 
     @Autowired
     EmbeddingService embeddingService;
+
+    @Autowired
+    EmbeddingRepository repository;
 
     @Test
     void testListEmbeddings() {
@@ -139,5 +145,23 @@ class EmbeddingServiceTest extends EmbeddedPostgreSQLTest {
         final Optional<Img> img = embeddingService.getImg(subject.getApiKey(), embedding.getId());
         assertThat(img.isPresent(), is(true));
         assertThat(img.get().getContent(), is(embedding.getImg().getContent()));
+    }
+
+    @Test
+    @Transactional
+    void updateAttributes() {
+        // arrange
+        var model = dbHelper.insertModel();
+        var subject = dbHelper.insertSubject(model, "subject");
+        var embedding = dbHelper.insertEmbeddingWithImg(subject, "calculator", new double[]{1.0, 2.0}, dbHelper.insertImg(Map.of("key1", "value1")));
+        var attributes = Map.of("key1", "newValue1", "key2", "value2");
+
+        // act
+        embeddingService.updateEmbedding(embedding.getId(), attributes);
+
+        // assert
+        var updatedEmbedding = repository.findById(embedding.getId());
+        assertThat(updatedEmbedding.isPresent(), is(true));
+        assertThat(updatedEmbedding.get().getImg().getAttributes(), is(attributes));
     }
 }

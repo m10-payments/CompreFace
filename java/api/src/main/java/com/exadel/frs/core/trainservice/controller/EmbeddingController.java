@@ -13,6 +13,7 @@ import com.exadel.frs.core.trainservice.service.SubjectService;
 import com.exadel.frs.core.trainservice.validation.ImageExtensionValidator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiParam;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +65,8 @@ public class EmbeddingController {
                 file,
                 subjectName,
                 detProbThreshold,
-                apiKey
+                apiKey,
+                Map.of()
         );
 
         return new EmbeddingDto(pair.getRight().getId().toString(), subjectName);
@@ -77,17 +79,29 @@ public class EmbeddingController {
             @ApiParam(value = API_KEY_DESC, required = true) @RequestHeader(X_FRS_API_KEY_HEADER) final String apiKey,
             @ApiParam(value = SUBJECT_DESC) @Valid @NotBlank(message = SUBJECT_NAME_IS_EMPTY) @RequestParam(value = SUBJECT) String subjectName,
             @ApiParam(value = DET_PROB_THRESHOLD_DESC) @RequestParam(value = DET_PROB_THRESHOLD, required = false) final Double detProbThreshold,
-            @Valid @RequestBody Base64File request) {
+            @Valid @RequestBody AddEmbeddingRequest request) {
         imageValidator.validateBase64(request.getContent());
 
         final Pair<Subject, Embedding> pair = subjectService.saveCalculatedEmbedding(
                 request.getContent(),
                 subjectName,
                 detProbThreshold,
-                apiKey
+                apiKey,
+                request.getImageAttributes() == null ? Map.of() : request.getImageAttributes()
         );
 
         return new EmbeddingDto(pair.getRight().getId().toString(), subjectName);
+    }
+
+    @PutMapping("/{embeddingId}")
+    public void updateEmbedding(
+            @PathVariable UUID embeddingId,
+            @RequestBody UpdateEmbeddingRequest request
+    ) {
+        Optional.of(request)
+                .map(UpdateEmbeddingRequest::getImageAttributes)
+                .filter(a -> !a.isEmpty())
+                .ifPresent(attributes -> embeddingService.updateEmbedding(embeddingId, attributes));
     }
 
     @GetMapping(value = "/{embeddingId}/img", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -113,7 +127,7 @@ public class EmbeddingController {
     @DeleteMapping
     public Map<String, Object> removeAllSubjectEmbeddings(
             @ApiParam(value = API_KEY_DESC, required = true) @RequestHeader(name = X_FRS_API_KEY_HEADER) final String apiKey,
-            @ApiParam(value = SUBJECT_DESC) @Validated @NotBlank(message = SUBJECT_NAME_IS_EMPTY) @RequestParam( name = SUBJECT, required = false) final String subjectName
+            @ApiParam(value = SUBJECT_DESC) @Validated @NotBlank(message = SUBJECT_NAME_IS_EMPTY) @RequestParam(name = SUBJECT, required = false) final String subjectName
     ) {
         return Map.of(
                 "deleted",
@@ -129,16 +143,16 @@ public class EmbeddingController {
         var embedding = subjectService.removeSubjectEmbedding(apiKey, embeddingId);
         return new EmbeddingDto(embeddingId.toString(), embedding.getSubject().getSubjectName());
     }
+
     @WriteEndpoint
     @PostMapping("/delete")
     public List<EmbeddingDto> deleteEmbeddingsById(
             @ApiParam(value = API_KEY_DESC, required = true) @RequestHeader(name = X_FRS_API_KEY_HEADER) final String apiKey,
             @ApiParam(value = IMAGE_IDS_DESC, required = true) @RequestBody List<UUID> embeddingIds) {
         List<Embedding> list = subjectService.removeSubjectEmbeddings(apiKey, embeddingIds);
-        List<EmbeddingDto> dtoList = list.stream()
-                                         .map(c -> new EmbeddingDto(c.getId().toString(), c.getSubject().getSubjectName()))
-                                         .collect(Collectors.toList());
-        return dtoList;
+        return list.stream()
+                .map(c -> new EmbeddingDto(c.getId().toString(), c.getSubject().getSubjectName()))
+                .collect(Collectors.toList());
     }
 
     @PostMapping(value = "/{embeddingId}/verify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

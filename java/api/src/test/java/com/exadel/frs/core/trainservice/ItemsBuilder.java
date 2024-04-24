@@ -3,27 +3,27 @@ package com.exadel.frs.core.trainservice;
 import com.exadel.frs.commonservice.entity.*;
 import com.exadel.frs.commonservice.enums.ModelType;
 import com.exadel.frs.core.trainservice.system.global.Constants;
-
+import java.util.Map;
 import java.util.UUID;
 
 public class ItemsBuilder {
 
     public static App makeApp(String apiKey) {
         return App.builder()
-                  .name("App" + System.currentTimeMillis())
-                  .guid(UUID.randomUUID().toString())
-                  .apiKey(apiKey)
-                  .build();
+                .name("App" + System.currentTimeMillis())
+                .guid(UUID.randomUUID().toString())
+                .apiKey(apiKey)
+                .build();
     }
 
     public static Model makeModel(String apiKey, ModelType type, App app) {
         return Model.builder()
-                    .apiKey(apiKey)
-                    .name("Model" + UUID.randomUUID())
-                    .type(type)
-                    .guid(UUID.randomUUID().toString())
-                    .app(app)
-                    .build();
+                .apiKey(apiKey)
+                .name("Model" + UUID.randomUUID())
+                .type(type)
+                .guid(UUID.randomUUID().toString())
+                .app(app)
+                .build();
     }
 
     public static Embedding makeEmbedding(String subjectName, String apiKey) {
@@ -60,18 +60,34 @@ public class ItemsBuilder {
         return new EnhancedEmbeddingProjection(UUID.randomUUID(), new double[]{1.1, 2.2, 3.3}, subject);
     }
 
-    public static Img makeImg(byte[] content) {
+    public static Img makeImg(byte[] content, Map<String, String> attributes) {
         return new Img()
-                .setContent(content);
+                .setContent(content)
+                .setAttributes(attributes);
     }
 
     public static Img makeImg() {
-        return makeImg(new byte[]{
-                (byte) 0xCA,
-                (byte) 0xFE,
-                (byte) 0xBA,
-                (byte) 0xBE
-        });
+        return makeImg(
+                new byte[]{
+                        (byte) 0xCA,
+                        (byte) 0xFE,
+                        (byte) 0xBA,
+                        (byte) 0xBE
+                },
+                Map.of()
+        );
+    }
+
+    public static Img makeImg(Map<String, String> attributes) {
+        return makeImg(
+                new byte[]{
+                        (byte) 0xCA,
+                        (byte) 0xFE,
+                        (byte) 0xBA,
+                        (byte) 0xBE
+                },
+                attributes
+        );
     }
 
     public static Subject makeSubject(String apiKey, String subjectName) {

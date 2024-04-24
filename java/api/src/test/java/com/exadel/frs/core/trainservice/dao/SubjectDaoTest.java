@@ -10,6 +10,7 @@ import com.exadel.frs.commonservice.repository.SubjectRepository;
 import com.exadel.frs.core.trainservice.DbHelper;
 import com.exadel.frs.core.trainservice.EmbeddedPostgreSQLTest;
 import com.exadel.frs.core.trainservice.dto.EmbeddingInfo;
+import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -190,7 +191,7 @@ class SubjectDaoTest extends EmbeddedPostgreSQLTest {
         final Pair<Subject, Embedding> pair = subjectDao.addEmbedding(
                 model.getApiKey(),
                 "subject",
-                new EmbeddingInfo("calc", new double[]{1.1, 5.6}, null)
+                new EmbeddingInfo("calc", new double[]{1.1, 5.6}, null, Map.of("k", "v"))
         );
 
         var subject = pair.getLeft();
@@ -200,6 +201,7 @@ class SubjectDaoTest extends EmbeddedPostgreSQLTest {
         assertThat(subject.getId()).isNotNull();
         assertThat(embedding).isNotNull();
         assertThat(embedding.getId()).isNotNull();
+        assertThat(embedding.getImg()).isNull();
 
         // check embedding has been stored
         var embeddings = embeddingRepository.findBySubjectId(subject.getId());
@@ -216,7 +218,7 @@ class SubjectDaoTest extends EmbeddedPostgreSQLTest {
         final Pair<Subject, Embedding> pair = subjectDao.addEmbedding(
                 model.getApiKey(),
                 "subject",
-                new EmbeddingInfo("calc", new double[]{1.1, 5.6}, new byte[]{0xC, 0xA})
+                new EmbeddingInfo("calc", new double[]{1.1, 5.6}, new byte[]{0xC, 0xA}, Map.of("k", "v"))
         );
 
         var subject = pair.getLeft();
@@ -226,6 +228,7 @@ class SubjectDaoTest extends EmbeddedPostgreSQLTest {
         assertThat(subject.getId()).isNotNull();
         assertThat(embedding).isNotNull();
         assertThat(embedding.getId()).isNotNull();
+        assertThat(embedding.getImg().getAttributes()).containsExactly(Map.entry("k", "v"));
 
         var embeddings = embeddingRepository.findBySubjectId(subject.getId());
         assertThat(embeddings).hasSize(1);
