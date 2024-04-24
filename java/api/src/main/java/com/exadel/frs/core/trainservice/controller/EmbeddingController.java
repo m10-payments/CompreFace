@@ -93,7 +93,7 @@ public class EmbeddingController {
         return new EmbeddingDto(pair.getRight().getId().toString(), subjectName);
     }
 
-    @PutMapping("/{embeddingId}")
+    @PatchMapping("/{embeddingId}")
     public void updateEmbedding(
             @PathVariable UUID embeddingId,
             @RequestBody UpdateEmbeddingRequest request
