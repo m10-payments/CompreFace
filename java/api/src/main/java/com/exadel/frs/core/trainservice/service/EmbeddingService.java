@@ -37,7 +37,13 @@ public class EmbeddingService {
         embeddingRepository.findById(embeddingId)
                 .ifPresent(em -> {
                     var img = em.getImg();
-                    img.setAttributes(imageAttributes);
+                    var attrs = img.getAttributes();
+                    if (attrs == null) {
+                        attrs = imageAttributes;
+                    } else {
+                        attrs.putAll(imageAttributes);
+                    }
+                    img.setAttributes(attrs);
                 });
     }
 
