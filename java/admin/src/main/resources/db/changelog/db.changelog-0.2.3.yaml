@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-embeddings-attributes-table
+      author: ivan.kripakov@pashapay.az
+      changes:
+        - createTable:
+            tableName: image_attributes
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: 'gen_random_uuid()'
+              - column:
+                  name: name
+                  type: varchar(255)
+              - column:
+                  name: value
+                  type: varchar(255)
+              - column:
+                  name: image_id
+                  type: uuid
+        - addPrimaryKey:
+            columnNames: id
+            constraintName: pk_image_attributes
+            tableName: image_attributes
+        - addForeignKeyConstraint:
+            baseTableName: image_attributes
+            baseColumnNames: image_id
+            referencedColumnNames: id
+            referencedTableName: img
+            constraintName: fk_image_attributes_img_id
+            onDelete: CASCADE
+            onUpdate: CASCADE

@@ -1,5 +1,6 @@
 package com.exadel.frs.commonservice.entity;
 
+import java.util.Map;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
@@ -20,4 +21,13 @@ public class Img {
 
     @Column(name = "content")
     private byte[] content;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "image_attributes",
+            joinColumns = @JoinColumn(name = "image_id")
+    )
+    @MapKeyColumn(name = "name")
+    @Column(name = "value")
+    private Map<String, String> attributes;
 }

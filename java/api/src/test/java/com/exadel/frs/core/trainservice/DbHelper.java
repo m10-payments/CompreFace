@@ -18,6 +18,7 @@ import com.exadel.frs.commonservice.repository.ModelStatisticRepository;
 import com.exadel.frs.commonservice.repository.SubjectRepository;
 import com.exadel.frs.core.trainservice.repository.AppRepository;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -115,6 +116,10 @@ public class DbHelper {
     }
 
     public Img insertImg() {
-        return imgRepository.save(makeImg());
+        return imgRepository.save(makeImg(Map.of()));
+    }
+
+    public Img insertImg(Map<String, String> attributes) {
+        return imgRepository.save(makeImg(attributes));
     }
 }

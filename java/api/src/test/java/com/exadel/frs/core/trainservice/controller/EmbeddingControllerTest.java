@@ -115,7 +115,7 @@ class EmbeddingControllerTest extends EmbeddedPostgreSQLTest {
 
         doReturn(pair())
                 .when(subjectService)
-                .saveCalculatedEmbedding(any(MultipartFile.class), any(), any(), any());
+                .saveCalculatedEmbedding(any(MultipartFile.class), any(), any(), any(), any());
 
         mockMvc.perform(
                 multipart(API_V1 + "/recognition/faces")
@@ -131,7 +131,7 @@ class EmbeddingControllerTest extends EmbeddedPostgreSQLTest {
     void testAddEmbeddingBase64() throws Exception {
         doReturn(pair())
                 .when(subjectService)
-                .saveCalculatedEmbedding(any(String.class), any(), any(), any());
+                .saveCalculatedEmbedding(any(String.class), any(), any(), any(), any());
 
         Base64File request = new Base64File();
         request.setContent(Base64.getEncoder().encodeToString(new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE}));

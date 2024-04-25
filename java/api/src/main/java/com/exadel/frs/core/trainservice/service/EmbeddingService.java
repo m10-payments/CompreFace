@@ -7,6 +7,7 @@ import com.exadel.frs.commonservice.entity.Img;
 import com.exadel.frs.commonservice.repository.EmbeddingRepository;
 import com.exadel.frs.commonservice.repository.ImgRepository;
 import com.exadel.frs.core.trainservice.system.global.Constants;
+import java.util.Map;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,21 @@ public class EmbeddingService {
     @Transactional
     public int updateEmbedding(UUID embeddingId, double[] embedding, String calculator) {
         return embeddingRepository.updateEmbedding(embeddingId, embedding, calculator);
+    }
+
+    @Transactional
+    public void updateEmbedding(UUID embeddingId, Map<String, String> imageAttributes) {
+        embeddingRepository.findById(embeddingId)
+                .ifPresent(em -> {
+                    var img = em.getImg();
+                    var attrs = img.getAttributes();
+                    if (attrs == null) {
+                        attrs = imageAttributes;
+                    } else {
+                        attrs.putAll(imageAttributes);
+                    }
+                    img.setAttributes(attrs);
+                });
     }
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
