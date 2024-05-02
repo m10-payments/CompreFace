@@ -21,6 +21,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -94,6 +95,7 @@ public class EmbeddingController {
     }
 
     @PatchMapping("/{embeddingId}")
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void updateEmbedding(
             @PathVariable UUID embeddingId,
             @RequestBody UpdateEmbeddingRequest request
