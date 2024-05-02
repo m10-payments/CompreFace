@@ -23,7 +23,7 @@ jobs:
           docker images
 
       - name: Login to GitHub Packages
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GH_TOKEN_WRITE_PACKAGES }}" | docker login ghcr.io -u admin-m10 --password-stdin
         
       - name: Push images to Docker Hub
         working-directory: ./dev/
@@ -31,4 +31,3 @@ jobs:
           VERSION: ${{ github.event.inputs.version }}
         run: |
           docker-compose push
-
