@@ -30,18 +30,20 @@ import com.exadel.frs.core.trainservice.service.EmbeddingService;
 import com.exadel.frs.core.trainservice.service.NotificationReceiverService;
 import com.exadel.frs.core.trainservice.service.NotificationSenderService;
 import com.exadel.frs.core.trainservice.system.global.Constants;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Stream;
+import java.util.function.Consumer;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.testcontainers.shaded.org.apache.commons.lang3.reflect.FieldUtils;
 
 import static com.exadel.frs.core.trainservice.ItemsBuilder.makeEnhancedEmbeddingProjection;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -52,7 +54,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class EmbeddingCacheProviderTest {
@@ -78,13 +79,10 @@ class EmbeddingCacheProviderTest {
 
     @BeforeEach
     @SuppressWarnings("unchecked")
-    public void resetStaticCache() {
+    public void resetStaticCache() throws IllegalAccessException {
+        FieldUtils.writeField(embeddingCacheProvider, "pageSize", 10, true);
         embeddingCacheProvider.invalidate(API_KEY);
-        when(embeddingService.doWithEnhancedEmbeddingProjectionStream(eq(API_KEY), any()))
-            .thenAnswer(invocation -> {
-                var function = (Function<Stream<EnhancedEmbeddingProjection>, ?>) invocation.getArgument(1);
-                return function.apply(Stream.of());
-            });
+        Mockito.doNothing().when(embeddingService).doWithEnhancedEmbeddingProjections(eq(API_KEY), any(), eq(10));
     }
 
     @Test
@@ -97,11 +95,13 @@ class EmbeddingCacheProviderTest {
                 makeEnhancedEmbeddingProjection("C")
         };
 
-        when(embeddingService.doWithEnhancedEmbeddingProjectionStream(eq(API_KEY), any()))
-                .thenAnswer(invocation -> {
-                    var function = (Function<Stream<EnhancedEmbeddingProjection>, ?>) invocation.getArgument(1);
-                    return function.apply(Stream.of(projections));
-                });
+        Mockito.doAnswer(
+            invocation -> {
+                var function = (Consumer<EnhancedEmbeddingProjection>) invocation.getArgument(1);
+                Arrays.stream(projections).forEach(function);
+                return null;
+            }
+        ).when(embeddingService).doWithEnhancedEmbeddingProjections(eq(API_KEY), any(), eq(10));
 
         var actual = embeddingCacheProvider.getOrLoad(API_KEY);
 

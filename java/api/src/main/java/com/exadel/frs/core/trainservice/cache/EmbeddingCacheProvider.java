@@ -12,6 +12,7 @@ import com.exadel.frs.core.trainservice.service.EmbeddingService;
 import com.exadel.frs.core.trainservice.service.NotificationSenderService;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.math3.linear.RealVector;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import static com.exadel.frs.core.trainservice.system.global.Constants.SERVER_UUID;
@@ -41,11 +43,23 @@ public class EmbeddingCacheProvider {
 
     private final Lock lock = new ReentrantLock();
 
+    @Value("${embeddings.cache.initialization.page-size}")
+    private int pageSize;
+
     private static final Cache<String, EmbeddingCollection> cache =
             CacheBuilder.newBuilder()
                     .expireAfterAccess(CACHE_EXPIRATION, TimeUnit.SECONDS)
                     .maximumSize(CACHE_MAXIMUM_SIZE)
                     .build();
+
+    void fillInCache(Collection<String> apiKeys) {
+        if (apiKeys.size() > CACHE_MAXIMUM_SIZE) {
+            log.warn("Number of api keys to initialize cache is greater than cache maximum size");
+        }
+        apiKeys.stream()
+                .limit(CACHE_MAXIMUM_SIZE)
+                .forEach(this::getOrLoad);
+    }
 
     public EmbeddingCollection getOrLoad(final String apiKey) {
         var result = cache.getIfPresent(apiKey);
@@ -54,9 +68,16 @@ public class EmbeddingCacheProvider {
                 lock.lock();
                 result = cache.getIfPresent(apiKey);
                 if (result == null) {
-                    result = embeddingService.doWithEnhancedEmbeddingProjectionStream(apiKey, EmbeddingCollection::from);
-                    cache.put(apiKey, result);
+                    var embeddingCollection = new EmbeddingCollection();
+                    embeddingService.doWithEnhancedEmbeddingProjections(
+                            apiKey,
+                            embeddingCollection::addEmbedding,
+                            pageSize
+                    );
+                    cache.put(apiKey, embeddingCollection);
+                    return embeddingCollection;
                 }
+                return result;
             } finally {
                 lock.unlock();
             }
@@ -110,13 +131,13 @@ public class EmbeddingCacheProvider {
     }
 
     /**
-     * @deprecated
-     * See {@link com.exadel.frs.core.trainservice.service.NotificationHandler#handleUpdate(CacheActionDto)}
+     * @deprecated See {@link com.exadel.frs.core.trainservice.service.NotificationHandler#handleUpdate(CacheActionDto)}
      */
     @Deprecated(forRemoval = true)
     public void receivePutOnCache(String apiKey) {
-        var result = embeddingService.doWithEnhancedEmbeddingProjectionStream(apiKey, EmbeddingCollection::from);
-        cache.put(apiKey, result);
+        var newEmbeddingCollection = new EmbeddingCollection();
+        embeddingService.doWithEnhancedEmbeddingProjections(apiKey, newEmbeddingCollection::addEmbedding, pageSize);
+        cache.put(apiKey, newEmbeddingCollection);
     }
 
     public void receiveInvalidateCache(final String apiKey) {

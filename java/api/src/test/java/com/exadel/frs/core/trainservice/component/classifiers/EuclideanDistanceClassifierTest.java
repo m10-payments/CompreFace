@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -42,7 +41,7 @@ class EuclideanDistanceClassifierTest {
         // arrange
         Mockito.when(provider.getOrLoad(Mockito.anyString())).thenReturn(
                 EmbeddingCollection.from(
-                        Stream.of(
+                        List.of(
                                 EMBEDDING_1,
                                 EMBEDDING_2,
                                 EMBEDDING_3
@@ -67,7 +66,7 @@ class EuclideanDistanceClassifierTest {
         // arrange
         Mockito.when(provider.getOrLoad(Mockito.anyString())).thenReturn(
                 EmbeddingCollection.from(
-                        Stream.of(
+                        List.of(
                                 EMBEDDING_1,
                                 EMBEDDING_2,
                                 EMBEDDING_3
