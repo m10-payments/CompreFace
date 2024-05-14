@@ -7,8 +7,6 @@ import com.exadel.frs.commonservice.entity.Img;
 import com.exadel.frs.commonservice.repository.EmbeddingRepository;
 import com.exadel.frs.commonservice.repository.ImgRepository;
 import com.exadel.frs.core.trainservice.system.global.Constants;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
@@ -56,19 +54,12 @@ public class EmbeddingService {
             Consumer<EnhancedEmbeddingProjection> func,
             int pageSize
     ) {
-        var start = Instant.now();
         var page = embeddingRepository.findEnhancedBySubjectApiKey(apiKey, Pageable.ofSize(pageSize));
         page.forEach(func);
-
-        log.debug("Loaded {} / {} embeddings for API key {}", page.getSize(), page.getTotalElements(), apiKey);
-
         while (page.hasNext()) {
             page = embeddingRepository.findEnhancedBySubjectApiKey(apiKey, page.nextPageable());
-            log.debug("Loaded {} / {} embeddings for API key {}", page.getSize(), page.getTotalElements(), apiKey);
             page.forEach(func);
         }
-        var totalDuration = Duration.between(start, Instant.now());
-        log.debug("Finished loading {} embeddings for API key {} in {}", page.getTotalElements(), apiKey, totalDuration);
     }
 
     public List<Embedding> getWithImgAndCalculatorNotEq(String calculator) {
