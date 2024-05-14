@@ -25,6 +25,7 @@ public class EmbeddingCacheProviderInitializer implements ApplicationRunner {
                 .map(keys -> keys.split(","))
                 .stream()
                 .flatMap(Arrays::stream)
+                .filter(s -> !s.isBlank())
                 .filter(EmbeddingCacheProviderInitializer::isUuid)
                 .collect(Collectors.toSet());
         embeddingCacheProvider.fillInCache(apiKeys);
