@@ -48,6 +48,12 @@ app:
       retryer:
         max-attempts: ${MAX_ATTEMPTS:1}
 
+embeddings:
+  cache:
+    initialization:
+      api-keys: ${EMBEDDINGS_CACHE_INITIALIZATION_API_KEYS:123}
+      page-size: ${EMBEDDINGS_CACHE_INITIALIZATION_PAGE_SIZE:100000}
+
 statistic:
   model:
     cron-expression: ${MODEL_STATISTIC_CRON_EXPRESSION:0 0 * ? * *}

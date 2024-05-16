@@ -260,7 +260,7 @@ class SubjectServiceTest {
         var detProbThreshold = 0.7;
         var randomUUId = UUID.randomUUID();
         var file = new MockMultipartFile("anyname", new byte[]{0xA});
-        var embeddingCollection = EmbeddingCollection.from(Stream.of(
+        var embeddingCollection = EmbeddingCollection.from(List.of(
                 makeEnhancedEmbeddingProjection("A"),
                 makeEnhancedEmbeddingProjection("B")));
 

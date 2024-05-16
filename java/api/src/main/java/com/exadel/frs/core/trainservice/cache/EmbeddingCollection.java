@@ -4,6 +4,7 @@ import com.exadel.frs.commonservice.entity.Embedding;
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
 import com.exadel.frs.commonservice.entity.EnhancedEmbeddingProjection;
 import com.exadel.frs.commonservice.exception.IncorrectImageIdException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -14,22 +15,25 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealVector;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class EmbeddingCollection {
 
     private final ConcurrentMap<String, Map<UUID, RealVector>> mapping;
 
-    public static EmbeddingCollection from(final Stream<EnhancedEmbeddingProjection> stream) {
+    public EmbeddingCollection() {
+        this.mapping = new ConcurrentHashMap<>();
+    }
+
+    public static EmbeddingCollection from(final Collection<EnhancedEmbeddingProjection> projections) {
         // we copy vector here just in case
-        var newMap = stream.map(e -> Map.entry(e.getSubjectName(), Pair.of(e.getEmbeddingId(), MatrixUtils.createRealVector(e.getEmbeddingData()))))
+        var newMap = projections.stream().map(e -> Map.entry(e.getSubjectName(), Pair.of(e.getEmbeddingId(), MatrixUtils.createRealVector(e.getEmbeddingData()))))
                 .collect(
                         Collectors.toConcurrentMap(
                                 Entry::getKey,
@@ -66,6 +70,11 @@ public class EmbeddingCollection {
         mapping.computeIfAbsent(embedding.getSubject().getSubjectName(), k -> new ConcurrentHashMap<>())
                 .put(id, realVector);
         return new EmbeddingProjection(id, embedding.getSubject().getSubjectName());
+    }
+
+    public void addEmbedding(final EnhancedEmbeddingProjection projection) {
+        mapping.computeIfAbsent(projection.getSubjectName(), k -> new ConcurrentHashMap<>())
+                .put(projection.getEmbeddingId(), MatrixUtils.createRealVector(projection.getEmbeddingData()));
     }
 
     public void removeEmbeddingsBySubjectName(String subjectName) {

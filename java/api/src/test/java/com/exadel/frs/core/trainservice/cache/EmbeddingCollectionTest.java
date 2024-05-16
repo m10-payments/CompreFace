@@ -18,8 +18,8 @@ package com.exadel.frs.core.trainservice.cache;
 
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
 import com.exadel.frs.commonservice.entity.EnhancedEmbeddingProjection;
+import java.util.Arrays;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ class EmbeddingCollectionTest {
 
     @Test
     void testRemoveFromEmpty() {
-        var embeddingCollection = EmbeddingCollection.from(Stream.of());
+        var embeddingCollection = new EmbeddingCollection();
         final EmbeddingProjection removed = embeddingCollection.removeEmbedding(new EmbeddingProjection(UUID.randomUUID(), "subject_name"));
 
         assertThat(removed).isNull();
@@ -42,7 +42,7 @@ class EmbeddingCollectionTest {
 
     @Test
     void testAddToEmpty() {
-        var embeddingCollection = EmbeddingCollection.from(Stream.of());
+        var embeddingCollection = new EmbeddingCollection();
         Assertions.assertThat(embeddingCollection.exposeMap()).isEmpty();
 
         var embedding = makeEmbedding("A", API_KEY);
@@ -60,7 +60,7 @@ class EmbeddingCollectionTest {
         var projection2 = makeEnhancedEmbeddingProjection("B");
         var projection3 = makeEnhancedEmbeddingProjection("C");
         var projections = new EnhancedEmbeddingProjection[]{projection1, projection2, projection3};
-        var embeddingCollection = EmbeddingCollection.from(Stream.of(projections));
+        var embeddingCollection = EmbeddingCollection.from(Arrays.asList(projections));
 
         assertThat(embeddingCollection.exposeMap()).hasSize(projections.length);
         assertThat(embeddingCollection.exposeMap().get("A"))
@@ -78,7 +78,7 @@ class EmbeddingCollectionTest {
                 makeEnhancedEmbeddingProjection("B"),
                 makeEnhancedEmbeddingProjection("C")
         };
-        var embeddingCollection = EmbeddingCollection.from(Stream.of(projections));
+        var embeddingCollection = EmbeddingCollection.from(Arrays.asList(projections));
         var newEmbedding = makeEmbedding("D", API_KEY);
         newEmbedding.setId(UUID.randomUUID());
 
@@ -96,7 +96,7 @@ class EmbeddingCollectionTest {
         var projection2 = makeEnhancedEmbeddingProjection("B");
         var projection3 = makeEnhancedEmbeddingProjection("C");
         var projections = new EnhancedEmbeddingProjection[]{projection1, projection2, projection3};
-        var embeddingCollection = EmbeddingCollection.from(Stream.of(projections));
+        var embeddingCollection = EmbeddingCollection.from(Arrays.asList(projections));
 
         embeddingCollection.removeEmbedding(EmbeddingProjection.from(projection1));
 
