@@ -10,8 +10,11 @@ import com.exadel.frs.core.trainservice.dto.CacheActionDto.RemoveSubjects;
 import com.exadel.frs.core.trainservice.dto.CacheActionDto.RenameSubjects;
 import com.exadel.frs.core.trainservice.service.EmbeddingService;
 import com.exadel.frs.core.trainservice.service.NotificationSenderService;
+import com.exadel.frs.core.trainservice.util.MaskUtils;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +61,14 @@ public class EmbeddingCacheProvider {
         }
         apiKeys.stream()
                 .limit(CACHE_MAXIMUM_SIZE)
-                .forEach(this::getOrLoad);
+                .forEach(k -> {
+                    var masked = MaskUtils.maskApiKey(k);
+                    log.debug("Initializing cache for api key: {}", masked);
+                    var start  = Instant.now();
+                    getOrLoad(k);
+                    var initDuration = Duration.between(start, Instant.now());
+                    log.info("Cache for api key {} initialized in {}", masked, initDuration);
+                });
     }
 
     public EmbeddingCollection getOrLoad(final String apiKey) {
