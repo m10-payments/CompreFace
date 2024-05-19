@@ -118,11 +118,15 @@ public class EmbeddingController {
     }
 
     @GetMapping
-    public Faces listEmbeddings(
+    public Faces<?> listEmbeddings(
             @ApiParam(value = API_KEY_DESC, required = true) @RequestHeader(name = X_FRS_API_KEY_HEADER) final String apiKey,
             @ApiParam(value = SUBJECT_DESC) @Valid @RequestParam(name = SUBJECT, required = false) final String subjectName,
+            @RequestParam(name = "expanded", required = false, defaultValue = "false") final boolean expanded,
             Pageable pageable) {
-        return new Faces(embeddingService.listEmbeddings(apiKey, subjectName, pageable).map(embeddingMapper::toResponseDto));
+        if (expanded) {
+            return new Faces<>(embeddingService.listExpandedEmbeddings(apiKey, subjectName, pageable).map(embeddingMapper::toResponseDto));
+        }
+        return new Faces<>(embeddingService.listEmbeddings(apiKey, subjectName, pageable).map(embeddingMapper::toResponseDto));
     }
 
     @WriteEndpoint
@@ -215,12 +219,12 @@ public class EmbeddingController {
     }
 
     @RequiredArgsConstructor
-    private static final class Faces {
+    public static final class Faces<T> {
 
-        private final Page<EmbeddingDto> source;
+        private final Page<T> source;
 
         // As of backward compatibility we are not allowed to rename property 'faces' --> 'embedding'
-        public List<EmbeddingDto> getFaces() {
+        public List<T> getFaces() {
             return source.getContent();
         }
 

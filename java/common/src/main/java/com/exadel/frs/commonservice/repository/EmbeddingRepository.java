@@ -3,6 +3,7 @@ package com.exadel.frs.commonservice.repository;
 import com.exadel.frs.commonservice.entity.Embedding;
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
 import com.exadel.frs.commonservice.entity.EnhancedEmbeddingProjection;
+import com.exadel.frs.commonservice.entity.ExpandedEmbeddingProjection;
 import com.exadel.frs.commonservice.entity.Subject;
 import java.util.List;
 import java.util.UUID;
@@ -102,4 +103,18 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID> {
 
     @EntityGraph("embedding-with-subject")
     List<Embedding> findBySubject( Subject subject );
+
+    @Query(
+        value = "SELECT NEW com.exadel.frs.commonservice.entity.ExpandedEmbeddingProjection(" +
+                "e.id, " +
+                "e.subject.subjectName, " +
+                "json_object_agg(ia.name, ia.value)"
+                + ")" +
+                " FROM Embedding e " +
+                "LEFT OUTER JOIN ImageAttributes ia ON e.img.id = ia.img.id " + // left join to include embeddings without image attributes
+                "WHERE e.subject.apiKey = :apiKey " +
+                "AND (:subjectName IS NULL OR e.subject.subjectName = :subjectName) " +
+                "GROUP BY e.id, e.subject.subjectName"
+    )
+    Page<ExpandedEmbeddingProjection> fetchExpandedEmbeddings(String apiKey, String subjectName, Pageable pageable);
 }
