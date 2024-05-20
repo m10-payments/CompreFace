@@ -6,6 +6,6 @@ public class CustomizedPostgreSQL10Dialect extends PostgreSQL10Dialect {
 
     public CustomizedPostgreSQL10Dialect() {
         super();
-        this.registerFunction("json_object_agg", new JsonObjectAggFunction());
+        this.registerFunction(JsonObjectAggFunction.JSON_OBJECT_AGG, new JsonObjectAggFunction());
     }
 }

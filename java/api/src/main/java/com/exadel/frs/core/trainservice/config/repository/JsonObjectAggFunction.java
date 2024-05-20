@@ -8,9 +8,11 @@ import org.hibernate.type.Type;
 
 public class JsonObjectAggFunction extends StandardSQLFunction {
 
+    public static final String JSON_OBJECT_AGG = "json_object_agg";
+
     public JsonObjectAggFunction() {
         super(
-                "json_object_agg",
+                JSON_OBJECT_AGG,
                 new JsonBinaryType(HashMap.class)
         );
     }
@@ -18,11 +20,12 @@ public class JsonObjectAggFunction extends StandardSQLFunction {
     @Override
     public String render(Type firstArgumentType, List arguments, org.hibernate.engine.spi.SessionFactoryImplementor factory) {
         if (arguments.size() != 2) {
-            throw new IllegalArgumentException("The json_object_agg function must be passed exactly 2 arguments");
+            throw new IllegalArgumentException(String.format("The %s function must be passed exactly 2 arguments", JSON_OBJECT_AGG));
         }
         // see https://dba.stackexchange.com/questions/241541/json-object-agg-errors-on-null-in-field-name
         return String.format(
-                "coalesce(json_object_agg(%s, %s) FILTER (WHERE %s IS NOT NULL), '{}'::json)",
+                "coalesce(%s(%s, %s) FILTER (WHERE %s IS NOT NULL), '{}'::json)",
+                JSON_OBJECT_AGG,
                 arguments.get(0),
                 arguments.get(1),
                 arguments.get(0)
