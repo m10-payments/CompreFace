@@ -8,14 +8,14 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
+import lombok.Setter;
 
-@Data
-@Accessors(chain = true)
-@NoArgsConstructor
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 @Table(schema = "public", name = "image_attributes")
 public class ImageAttributes {
     @Id
