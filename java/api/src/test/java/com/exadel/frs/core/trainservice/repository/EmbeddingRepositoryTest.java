@@ -1,11 +1,14 @@
 package com.exadel.frs.core.trainservice.repository;
 
 import com.exadel.frs.commonservice.entity.Embedding;
+import com.exadel.frs.commonservice.entity.ExpandedEmbeddingProjection;
 import com.exadel.frs.commonservice.entity.Subject;
 import com.exadel.frs.commonservice.repository.EmbeddingRepository;
 import com.exadel.frs.core.trainservice.DbHelper;
 import com.exadel.frs.core.trainservice.EmbeddedPostgreSQLTest;
 import com.exadel.frs.core.trainservice.system.global.Constants;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -161,5 +164,94 @@ class EmbeddingRepositoryTest extends EmbeddedPostgreSQLTest {
 
         final Long count = embeddingRepository.countBySubjectApiKeyNotEqAndCalculatorNotEq(Constants.DEMO_API_KEY, Constants.FACENET2018);
         assertThat(count).isPositive(); // we've polluted DB with previous tests, so we couldn't do exact count
+    }
+
+    @Test
+    void fetchExpandedEmbeddingsBySubjectName() {
+        // arrange
+        var model = dbHelper.insertModel();
+        var subject = dbHelper.insertSubject(model, "subject_name");
+        var anotherSubject = dbHelper.insertSubject(model, "another_subject_name");
+        var img1 = dbHelper.insertImg(Map.of("name1", "value1", "name2", "value2"));
+        var img2 = dbHelper.insertImg(Map.of("name1", "value1", "name3", "value3"));
+        var embedding1 = dbHelper.insertEmbeddingWithImg(subject, Constants.FACENET2018, new double[]{}, img1);
+        var embedding2 = dbHelper.insertEmbeddingWithImg(subject, Constants.FACENET2018, new double[]{}, img2);
+        dbHelper.insertEmbeddingWithImg(anotherSubject, Constants.FACENET2018);
+
+        // act
+        var page1 = embeddingRepository.fetchExpandedEmbeddings(model.getApiKey(), subject.getSubjectName(), Pageable.ofSize(1));
+        var page2 = embeddingRepository.fetchExpandedEmbeddings(model.getApiKey(), subject.getSubjectName(), page1.nextPageable());
+
+        // assert
+        assertThat(page1.hasNext()).isTrue();
+        assertThat(page1.getTotalElements()).isEqualTo(2);
+        assertThat(page1.getTotalPages()).isEqualTo(2);
+        assertThat(page1.getNumberOfElements()).isEqualTo(1);
+
+        assertThat(page2.hasNext()).isFalse();
+        assertThat(page2.hasPrevious()).isTrue();
+        assertThat(page2.getTotalElements()).isEqualTo(2);
+        assertThat(page2.getTotalPages()).isEqualTo(2);
+        assertThat(page2.getNumberOfElements()).isEqualTo(1);
+
+        var fetchedEmbeddings = Stream.concat(
+                page1.getContent().stream(),
+                page2.getContent().stream()
+        ).collect(Collectors.toList());
+        var expected1 = new ExpandedEmbeddingProjection(
+                embedding1.getId(),
+                subject.getSubjectName(),
+                img1.getAttributes()
+        );
+        var expected2 = new ExpandedEmbeddingProjection(
+                embedding2.getId(),
+                subject.getSubjectName(),
+                img2.getAttributes()
+        );
+        assertThat(fetchedEmbeddings).containsExactlyInAnyOrder(expected1, expected2);
+    }
+
+    @Test
+    void fetchAllExpandedEmbeddings() {
+        // arrange
+        var model = dbHelper.insertModel();
+        var subject1 = dbHelper.insertSubject(model, "subject_name1");
+        var subject2 = dbHelper.insertSubject(model, "subject_name2");
+        var img1 = dbHelper.insertImg(Map.of("name1", "value1", "name2", "value2"));
+        var img2 = dbHelper.insertImg(Map.of("name1", "value1", "name3", "value3"));
+        var embedding1 = dbHelper.insertEmbeddingWithImg(subject1, Constants.FACENET2018, new double[]{}, img1);
+        var embedding2 = dbHelper.insertEmbeddingWithImg(subject2, Constants.FACENET2018, new double[]{}, img2);
+
+        // act
+        var page1 = embeddingRepository.fetchExpandedEmbeddings(model.getApiKey(), null, Pageable.ofSize(1));
+        var page2 = embeddingRepository.fetchExpandedEmbeddings(model.getApiKey(), null, page1.nextPageable());
+
+        // assert
+        assertThat(page1.hasNext()).isTrue();
+        assertThat(page1.getTotalElements()).isEqualTo(2);
+        assertThat(page1.getTotalPages()).isEqualTo(2);
+        assertThat(page1.getNumberOfElements()).isEqualTo(1);
+
+        assertThat(page2.hasNext()).isFalse();
+        assertThat(page2.hasPrevious()).isTrue();
+        assertThat(page2.getTotalElements()).isEqualTo(2);
+        assertThat(page2.getTotalPages()).isEqualTo(2);
+        assertThat(page2.getNumberOfElements()).isEqualTo(1);
+
+        var fetchedEmbeddings = Stream.concat(
+                page1.getContent().stream(),
+                page2.getContent().stream()
+        ).collect(Collectors.toList());
+        var expected1 = new ExpandedEmbeddingProjection(
+                embedding1.getId(),
+                subject1.getSubjectName(),
+                img1.getAttributes()
+        );
+        var expected2 = new ExpandedEmbeddingProjection(
+                embedding2.getId(),
+                subject2.getSubjectName(),
+                img2.getAttributes()
+        );
+        assertThat(fetchedEmbeddings).containsExactlyInAnyOrder(expected1, expected2);
     }
 }

@@ -18,6 +18,7 @@ package com.exadel.frs.core.trainservice.controller;
 
 import com.exadel.frs.commonservice.entity.Embedding;
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
+import com.exadel.frs.commonservice.entity.ExpandedEmbeddingProjection;
 import com.exadel.frs.commonservice.entity.Img;
 import com.exadel.frs.commonservice.entity.Subject;
 import com.exadel.frs.commonservice.exception.EmbeddingNotFoundException;
@@ -36,6 +37,7 @@ import com.exadel.frs.core.trainservice.service.EmbeddingService;
 import com.exadel.frs.core.trainservice.service.SubjectService;
 import com.exadel.frs.core.trainservice.validation.ImageExtensionValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -202,6 +204,30 @@ class EmbeddingControllerTest extends EmbeddedPostgreSQLTest {
     }
 
     @Test
+    void testListExpandedEmbeddings() throws Exception {
+        when(embeddingService.listExpandedEmbeddings(eq(API_KEY), eq(null), any()))
+                .thenReturn(new PageImpl<>(
+                        List.of(
+                                new ExpandedEmbeddingProjection(UUID.randomUUID(), "name1", Map.of()),
+                                new ExpandedEmbeddingProjection(UUID.randomUUID(), "name2", Map.of())
+                        ),
+                        PageRequest.of(1, 10), // second page
+                        12
+                ));
+
+        mockMvc.perform(
+                        get(API_V1 + "/recognition/faces")
+                                .header(X_FRS_API_KEY_HEADER, API_KEY)
+                                .queryParam("expanded", "true")
+                ).andExpect(status().isOk())
+                .andExpect(jsonPath("$.faces.length()", is(2)))
+                .andExpect(jsonPath("$.page_number", is(1))) // page number
+                .andExpect(jsonPath("$.page_size", is(10))) // page size
+                .andExpect(jsonPath("$.total_pages", is(2)))
+                .andExpect(jsonPath("$.total_elements", is(12)));
+    }
+
+    @Test
     void testListEmbeddingsWithSubjectName() throws Exception {
         var subjectName = "Johnny Depp";
         when(embeddingService.listEmbeddings(eq(API_KEY), eq(subjectName), any()))
@@ -215,6 +241,29 @@ class EmbeddingControllerTest extends EmbeddedPostgreSQLTest {
                 get(API_V1 + "/recognition/faces")
                         .queryParam("subject", subjectName)
                         .header(X_FRS_API_KEY_HEADER, API_KEY)
+        ).andExpect(status().isOk())
+                .andExpect(jsonPath("$.faces.length()", is(1)))
+                .andExpect(jsonPath("$.page_number", is(1))) // page number
+                .andExpect(jsonPath("$.page_size", is(10))) // page size
+                .andExpect(jsonPath("$.total_pages", is(2)))
+                .andExpect(jsonPath("$.total_elements", is(11)));
+    }
+
+    @Test
+    void testListExpandedEmbeddingsWithSubjectName() throws Exception {
+        var subjectName = "Johnny Depp";
+        when(embeddingService.listExpandedEmbeddings(eq(API_KEY), eq(subjectName), any()))
+                .thenReturn(new PageImpl<>(
+                        List.of(new ExpandedEmbeddingProjection(UUID.randomUUID(), subjectName, Map.of())),
+                        PageRequest.of(1, 10), // second page
+                        12
+                ));
+
+        mockMvc.perform(
+                get(API_V1 + "/recognition/faces")
+                        .queryParam("subject", subjectName)
+                        .header(X_FRS_API_KEY_HEADER, API_KEY)
+                        .queryParam("expanded", "true")
         ).andExpect(status().isOk())
                 .andExpect(jsonPath("$.faces.length()", is(1)))
                 .andExpect(jsonPath("$.page_number", is(1))) // page number

@@ -2,6 +2,7 @@ package com.exadel.frs.core.trainservice.service;
 
 import com.exadel.frs.commonservice.entity.Embedding;
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
+import com.exadel.frs.commonservice.entity.ExpandedEmbeddingProjection;
 import com.exadel.frs.commonservice.entity.EnhancedEmbeddingProjection;
 import com.exadel.frs.commonservice.entity.Img;
 import com.exadel.frs.commonservice.repository.EmbeddingRepository;
@@ -77,6 +78,10 @@ public class EmbeddingService {
 
     public Page<EmbeddingProjection> listEmbeddings(String apiKey, String subjectName, Pageable pageable) {
         return embeddingRepository.findBySubjectApiKeyAndSubjectName(apiKey, subjectName, pageable);
+    }
+
+    public Page<ExpandedEmbeddingProjection> listExpandedEmbeddings(String apiKey, String subjectName, Pageable pageable) {
+        return embeddingRepository.fetchExpandedEmbeddings(apiKey, subjectName, pageable);
     }
 
     public boolean isDemoCollectionInconsistent() {

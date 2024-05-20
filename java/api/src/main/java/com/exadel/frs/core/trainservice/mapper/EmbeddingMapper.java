@@ -1,7 +1,9 @@
 package com.exadel.frs.core.trainservice.mapper;
 
 import com.exadel.frs.commonservice.entity.EmbeddingProjection;
+import com.exadel.frs.commonservice.entity.ExpandedEmbeddingProjection;
 import com.exadel.frs.core.trainservice.dto.EmbeddingDto;
+import com.exadel.frs.core.trainservice.dto.ExpandedEmbeddingDto;
 import org.mapstruct.Mapper;
 
 import java.util.Collection;
@@ -12,6 +14,8 @@ import java.util.UUID;
 public interface EmbeddingMapper {
 
     EmbeddingDto toResponseDto(EmbeddingProjection projection);
+
+    ExpandedEmbeddingDto toResponseDto(ExpandedEmbeddingProjection projection);
 
     Collection<EmbeddingDto> toResponseDto(Collection<EmbeddingProjection> projections);
 
