@@ -1,4 +1,4 @@
-package com.exadel.frs.core.trainservice.config.repository;
+package com.exadel.frs.commonservice.config;
 
 import org.hibernate.dialect.PostgreSQL10Dialect;
 

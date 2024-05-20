@@ -1,4 +1,4 @@
-package com.exadel.frs.core.trainservice.config.repository;
+package com.exadel.frs.commonservice.config;
 
 import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 import java.util.HashMap;
