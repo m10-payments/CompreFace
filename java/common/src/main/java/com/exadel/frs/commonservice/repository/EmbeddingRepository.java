@@ -113,7 +113,7 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID> {
                 " FROM Embedding e " +
                 "LEFT OUTER JOIN ImageAttributes ia ON e.img.id = ia.img.id " + // left join to include embeddings without image attributes
                 "WHERE e.subject.apiKey = :apiKey " +
-                "AND (:subjectName IS NULL OR e.subject.subjectName = :subjectName) " +
+                "   AND (cast(:subjectName as string) is null or e.subject.subjectName = :subjectName)" +
                 "GROUP BY e.id, e.subject.subjectName"
     )
     Page<ExpandedEmbeddingProjection> fetchExpandedEmbeddings(String apiKey, String subjectName, Pageable pageable);

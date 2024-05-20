@@ -42,7 +42,7 @@ spring:
         default_schema: public
         jdbc.lob.non_contextual_creation: true # fix for Caused by: java.sql.SQLFeatureNotSupportedException: Method org.postgresql.jdbc.PgConnection.createClob() is not yet implemented.
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        dialect: com.exadel.frs.commonservice.config.CustomizedPostgreSQL10Dialect
     hibernate:
       ddl-auto: none
     database: postgresql
