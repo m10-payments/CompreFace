@@ -17,11 +17,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealVector;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.NonNull;
 
+@Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class EmbeddingCollection {
 
@@ -73,8 +75,11 @@ public class EmbeddingCollection {
     }
 
     public void addEmbedding(final EnhancedEmbeddingProjection projection) {
-        mapping.computeIfAbsent(projection.getSubjectName(), k -> new ConcurrentHashMap<>())
+        var res = mapping.computeIfAbsent(projection.getSubjectName(), k -> new ConcurrentHashMap<>())
                 .put(projection.getEmbeddingId(), MatrixUtils.createRealVector(projection.getEmbeddingData()));
+        if (res != null) {
+            log.error("Embedding with id {} already exists", projection.getEmbeddingId());
+        }
     }
 
     public void removeEmbeddingsBySubjectName(String subjectName) {
