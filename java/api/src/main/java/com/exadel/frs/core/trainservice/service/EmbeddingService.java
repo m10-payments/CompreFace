@@ -13,7 +13,9 @@ import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -55,7 +57,7 @@ public class EmbeddingService {
             Consumer<EnhancedEmbeddingProjection> func,
             int pageSize
     ) {
-        var page = embeddingRepository.findEnhancedBySubjectApiKey(apiKey, Pageable.ofSize(pageSize));
+        var page = embeddingRepository.findEnhancedBySubjectApiKey(apiKey, PageRequest.of(0, pageSize, Sort.by("id")));
         page.forEach(func);
         while (page.hasNext()) {
             page = embeddingRepository.findEnhancedBySubjectApiKey(apiKey, page.nextPageable());
