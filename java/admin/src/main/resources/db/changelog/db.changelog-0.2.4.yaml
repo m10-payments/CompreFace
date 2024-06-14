@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: create-indexes-on-embeddings
+      id: create-index-on-embeddings
       author: ivan.kripakov@pashapay.az
       changes:
         - createIndex:
