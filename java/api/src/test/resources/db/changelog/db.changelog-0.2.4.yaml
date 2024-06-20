@@ -4,7 +4,7 @@ databaseChangeLog:
       author: ivan.kripakov@pashapay.az
       changes:
         - createIndex:
-            tableName: embeddings
+            tableName: embedding
             columns:
               - column:
                   name: subject_id
