@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-index-on-embeddings
+      author: ivan.kripakov@pashapay.az
+      changes:
+        - createIndex:
+            tableName: embeddings
+            columns:
+              - column:
+                  name: subject_id
+            indexName: embeddings_subject_id_idx
+  - changeSet:
+      id: create-index-on-image-attributes
+      author: ivan.kripakov@pashapay.az
+      changes:
+        - createIndex:
+            tableName: image_attributes
+            columns:
+              - column:
+                  name: image_id
+            indexName: image_attributes_image_id_idx
